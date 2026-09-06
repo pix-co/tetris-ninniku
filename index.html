@@ -331,6 +331,8 @@
   }
   .score-submit.hidden{ display:none; }
   #timeRow.hidden{ display:none; }
+  #scoreRow.hidden, #levelRow.hidden, #highscoreRow.hidden{ display:none; }
+  #overlayBackBtn.hidden{ display:none; }
   #nameInput{
     font-family:'Zen Maru Gothic', sans-serif;
     font-size:13px;
@@ -430,6 +432,7 @@
           <button class="btn secondary" id="submitScoreBtn" type="button">ランキングに登録</button>
         </div>
         <button class="btn" id="overlayBtn" type="button">はじめる</button>
+        <button class="btn secondary hidden" id="overlayBackBtn" type="button">スタートに戻る</button>
       </div>
     </div>
 
@@ -441,11 +444,11 @@
 
       <div class="panel">
         <h2>スコア</h2>
-        <div class="stat-row"><span>スコア</span><b id="score">0</b></div>
+        <div class="stat-row" id="scoreRow"><span>スコア</span><b id="score">0</b></div>
         <div class="stat-row"><span>ライン</span><b id="lines">0</b></div>
-        <div class="stat-row"><span>レベル</span><b id="level">1</b></div>
+        <div class="stat-row" id="levelRow"><span>レベル</span><b id="level">1</b></div>
         <div class="stat-row hidden" id="timeRow"><span>タイム</span><b id="timeStat">0:00.0</b></div>
-        <div class="stat-row"><span>ハイスコア</span><b id="highscore">0</b></div>
+        <div class="stat-row" id="highscoreRow"><span>ハイスコア</span><b id="highscore">0</b></div>
       </div>
 
       <div class="panel">
@@ -547,12 +550,16 @@
   const levelEl = document.getElementById('level');
   const timeStatEl = document.getElementById('timeStat');
   const timeRowEl = document.getElementById('timeRow');
+  const scoreRowEl = document.getElementById('scoreRow');
+  const levelRowEl = document.getElementById('levelRow');
+  const highscoreRowEl = document.getElementById('highscoreRow');
   const highscoreEl = document.getElementById('highscore');
   const bubbleEl = document.getElementById('bubble');
   const overlayEl = document.getElementById('overlay');
   const overlayTitleEl = document.getElementById('overlayTitle');
   const overlayTextEl = document.getElementById('overlayText');
   const overlayBtnEl = document.getElementById('overlayBtn');
+  const overlayBackBtnEl = document.getElementById('overlayBackBtn');
   const pauseBtnEl = document.getElementById('pauseBtn');
   const restartBtnEl = document.getElementById('restartBtn');
   const rankingBtnEl = document.getElementById('rankingBtn');
@@ -967,6 +974,7 @@
     overlayTextEl.textContent = text;
     overlayBtnEl.textContent = btnLabel;
     modeSelectEl.classList.toggle('hidden', overlayContext !== 'start');
+    overlayBackBtnEl.classList.toggle('hidden', overlayContext !== 'gameover');
     rankingListEl.classList.add('hidden');
     hideScoreSubmit();
     overlayEl.classList.remove('hidden');
@@ -1410,6 +1418,7 @@
     overlayTextEl.textContent = '';
     overlayBtnEl.textContent = 'とじる';
     modeSelectEl.classList.add('hidden');
+    overlayBackBtnEl.classList.add('hidden');
     scoreSubmitEl.classList.add('hidden');
     rankingListEl.classList.remove('hidden');
     renderRankingList();
@@ -1435,6 +1444,7 @@
       overlayBtnEl.textContent = overlayEl.dataset.savedBtn || 'はじめる';
     }
     modeSelectEl.classList.toggle('hidden', overlayContext !== 'start');
+    overlayBackBtnEl.classList.toggle('hidden', overlayContext !== 'gameover');
     if(overlayEl.dataset.savedScoreSubmit === '1' && pendingSubmit){
       scoreSubmitEl.classList.remove('hidden');
     }
@@ -1504,14 +1514,22 @@
   overlayBtnEl.addEventListener('click', () => {
     if(overlayContext === 'ranking'){ closeRanking(); return; }
     if(overlayContext === 'pause'){ togglePause(); return; }
-    if(overlayContext === 'gameover'){ initGame(); updateModeButtons(); return; }
     startOrRestart();
+  });
+
+  overlayBackBtnEl.addEventListener('click', () => {
+    initGame();
+    updateModeButtons();
   });
 
   function updateModeButtons(){
     modeMarathonBtnEl.classList.toggle('active', mode === 'marathon');
     modeTaBtnEl.classList.toggle('active', mode === 'ta40');
-    timeRowEl.classList.toggle('hidden', mode !== 'ta40');
+    const isTa = mode === 'ta40';
+    timeRowEl.classList.toggle('hidden', !isTa);
+    scoreRowEl.classList.toggle('hidden', isTa);
+    levelRowEl.classList.toggle('hidden', isTa);
+    highscoreRowEl.classList.toggle('hidden', isTa);
   }
   modeMarathonBtnEl.addEventListener('click', () => { mode = 'marathon'; updateModeButtons(); });
   modeTaBtnEl.addEventListener('click', () => { mode = 'ta40'; updateModeButtons(); });
