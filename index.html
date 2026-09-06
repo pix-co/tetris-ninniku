@@ -1256,7 +1256,6 @@
   }
 
   // ---------- Ranking (shared, backed by GitHub Issues + Actions) ----------
-  const RANKING_REPO = 'pix-co/tetris-ninniku';
   const RANKING_FILES = { marathon: 'ranking-marathon.json', ta40: 'ranking-ta40.json' };
   let pendingSubmit = null;
 
@@ -1317,15 +1316,9 @@
     });
   }
 
-  function buildIssueUrl(mode, value, name){
-    const body = 'mode: ' + mode + '\nvalue: ' + Math.round(value) + '\nname: ' + name;
-    const params = new URLSearchParams({
-      title: 'ランキング登録: ' + name,
-      labels: 'ranking',
-      body,
-    });
-    return 'https://github.com/' + RANKING_REPO + '/issues/new?' + params.toString();
-  }
+  // Cloudflare Worker that authenticates on our behalf and files the ranking
+  // issue via the GitHub API, so submitting doesn't need to leave the page.
+  const RANKING_SUBMIT_URL = 'https://tetris-ninniku.rapidpredict.workers.dev/';
 
   function showScoreSubmit(mode, value){
     pendingSubmit = { mode, value };
@@ -1342,14 +1335,31 @@
     scoreSubmitEl.classList.add('hidden');
   }
 
-  submitScoreBtnEl.addEventListener('click', () => {
+  submitScoreBtnEl.addEventListener('click', async () => {
     if(!pendingSubmit) return;
     let name = nameInputEl.value.replace(/[\r\n]/g, '').trim().slice(0, 12);
     if(!name) name = '名無しさん';
     try{ localStorage.setItem('ninniku-tetris-playername', name); }catch(e){ /* ignore */ }
-    window.open(buildIssueUrl(pendingSubmit.mode, pendingSubmit.value, name), '_blank', 'noopener');
-    submitScoreBtnEl.textContent = '登録ページを開きました';
+    const { mode: subMode, value: subValue } = pendingSubmit;
     submitScoreBtnEl.disabled = true;
+    submitScoreBtnEl.textContent = '登録中…';
+    try{
+      const res = await fetch(RANKING_SUBMIT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: subMode, value: subValue, name }),
+      });
+      const data = await res.json().catch(() => null);
+      if(res.ok && data && data.ok){
+        submitScoreBtnEl.textContent = '登録しました！反映まで少々お待ちください';
+      } else {
+        submitScoreBtnEl.textContent = '登録に失敗しました。もう一度お試しください';
+        submitScoreBtnEl.disabled = false;
+      }
+    }catch(e){
+      submitScoreBtnEl.textContent = '登録に失敗しました（通信エラー）';
+      submitScoreBtnEl.disabled = false;
+    }
   });
 
   function openRanking(){
