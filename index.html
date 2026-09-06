@@ -1583,7 +1583,7 @@
         return;
       }
       if(overlayContext === 'gameover'){
-        if(e.code === 'ArrowLeft' || e.code === 'ArrowRight'){
+        if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code)){
           gameoverFocusIndex = gameoverFocusIndex === 0 ? 1 : 0;
           updateGameoverFocus();
           return;
