@@ -333,9 +333,14 @@
   #timeRow.hidden{ display:none; }
   #scoreRow.hidden, #levelRow.hidden, #highscoreRow.hidden{ display:none; }
   #overlayBackBtn.hidden{ display:none; }
-  .kbd-focus{
-    outline: 3px solid var(--terracotta);
-    outline-offset: 2px;
+  .gameover-selected{
+    background: var(--golden) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 0 var(--outline-dark) !important;
+  }
+  .gameover-unselected{
+    background: var(--panel) !important;
+    color: var(--terracotta) !important;
   }
   #nameInput{
     font-family:'Zen Maru Gothic', sans-serif;
@@ -986,15 +991,17 @@
       gameoverFocusIndex = 0;
       updateGameoverFocus();
     } else {
-      overlayBtnEl.classList.remove('kbd-focus');
-      overlayBackBtnEl.classList.remove('kbd-focus');
+      overlayBtnEl.classList.remove('gameover-selected', 'gameover-unselected');
+      overlayBackBtnEl.classList.remove('gameover-selected', 'gameover-unselected');
     }
     overlayEl.classList.remove('hidden');
   }
 
   function updateGameoverFocus(){
-    overlayBtnEl.classList.toggle('kbd-focus', gameoverFocusIndex === 0);
-    overlayBackBtnEl.classList.toggle('kbd-focus', gameoverFocusIndex === 1);
+    overlayBtnEl.classList.toggle('gameover-selected', gameoverFocusIndex === 0);
+    overlayBtnEl.classList.toggle('gameover-unselected', gameoverFocusIndex !== 0);
+    overlayBackBtnEl.classList.toggle('gameover-selected', gameoverFocusIndex === 1);
+    overlayBackBtnEl.classList.toggle('gameover-unselected', gameoverFocusIndex !== 1);
   }
   function hideOverlay(){
     overlayEl.classList.add('hidden');
