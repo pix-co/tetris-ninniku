@@ -333,6 +333,10 @@
   #timeRow.hidden{ display:none; }
   #scoreRow.hidden, #levelRow.hidden, #highscoreRow.hidden{ display:none; }
   #overlayBackBtn.hidden{ display:none; }
+  .kbd-focus{
+    outline: 3px solid var(--terracotta);
+    outline-offset: 2px;
+  }
   #nameInput{
     font-family:'Zen Maru Gothic', sans-serif;
     font-size:13px;
@@ -613,6 +617,7 @@
   let mode = 'marathon'; // 'marathon' | 'ta40'
   let rankingViewMode = 'marathon';
   let overlayContext = 'start'; // 'start' | 'pause' | 'gameover' | 'ranking'
+  let gameoverFocusIndex = 0; // 0 = もう一度, 1 = スタートに戻る
   let runStartTime = null, pausedAccum = 0;
 
   // effects
@@ -977,7 +982,19 @@
     overlayBackBtnEl.classList.toggle('hidden', overlayContext !== 'gameover');
     rankingListEl.classList.add('hidden');
     hideScoreSubmit();
+    if(overlayContext === 'gameover'){
+      gameoverFocusIndex = 0;
+      updateGameoverFocus();
+    } else {
+      overlayBtnEl.classList.remove('kbd-focus');
+      overlayBackBtnEl.classList.remove('kbd-focus');
+    }
     overlayEl.classList.remove('hidden');
+  }
+
+  function updateGameoverFocus(){
+    overlayBtnEl.classList.toggle('kbd-focus', gameoverFocusIndex === 0);
+    overlayBackBtnEl.classList.toggle('kbd-focus', gameoverFocusIndex === 1);
   }
   function hideOverlay(){
     overlayEl.classList.add('hidden');
@@ -1552,9 +1569,22 @@
       e.preventDefault();
     }
     if(!started || gameOver){
-      if((overlayContext === 'start' || overlayContext === 'gameover')){
+      if(overlayContext === 'start'){
         if(e.code === 'ArrowLeft'){ mode = 'marathon'; updateModeButtons(); return; }
         if(e.code === 'ArrowRight'){ mode = 'ta40'; updateModeButtons(); return; }
+        if(e.code === 'Enter' || e.code === 'Space'){ startOrRestart(); }
+        return;
+      }
+      if(overlayContext === 'gameover'){
+        if(e.code === 'ArrowLeft' || e.code === 'ArrowRight'){
+          gameoverFocusIndex = gameoverFocusIndex === 0 ? 1 : 0;
+          updateGameoverFocus();
+          return;
+        }
+        if(e.code === 'Enter' || e.code === 'Space'){
+          (gameoverFocusIndex === 0 ? overlayBtnEl : overlayBackBtnEl).click();
+        }
+        return;
       }
       if(e.code === 'Enter' || e.code === 'Space'){ startOrRestart(); }
       return;
