@@ -740,6 +740,9 @@
       spawnBigText(msg, tspin === 'full' ? '#C8481A' : '#D37A82');
       spawnBurst(cleared > 0 ? 46 : 26);
       triggerShake();
+      if(tspin === 'full' && (cleared === 2 || cleared === 3)){
+        spawnCharacterRain(cleared === 3 ? 18 : 12);
+      }
     } else if(cleared > 0){
       const points = [0,100,300,500,800][cleared] * level;
       score += points;
@@ -749,6 +752,7 @@
         spawnBigText('テトリス!!', '#F3980D');
         spawnBurst(60);
         triggerShake();
+        spawnCharacterRain(20);
       } else {
         const msgs = {1:'やったね！', 2:'いいね！', 3:'すごい！'};
         setBubble(msgs[cleared]);
@@ -843,6 +847,23 @@
     }
   }
 
+  function spawnCharacterRain(count){
+    for(let i=0;i<count;i++){
+      const size = CELL * (1.1 + Math.random()*0.9);
+      effects.push({
+        kind:'rain',
+        x: Math.random()*COLS*CELL,
+        y: -size - Math.random()*ROWS*CELL*0.7,
+        vx: (Math.random()-0.5)*CELL*0.05,
+        vy: CELL*(0.09 + Math.random()*0.05),
+        size,
+        rot: (Math.random()-0.5)*0.5,
+        vrot: (Math.random()-0.5)*0.05,
+        life: 4000, maxLife: 4000,
+      });
+    }
+  }
+
   function triggerShake(){
     shakeUntil = performance.now() + 320;
     boardShellEl.classList.remove('shake');
@@ -859,6 +880,11 @@
         e.y += e.vy * (dt/16.67);
         e.vy += 0.14 * (dt/16.67);
         e.rot += e.vrot * (dt/16.67);
+      } else if(e.kind === 'rain'){
+        e.x += e.vx * (dt/16.67);
+        e.y += e.vy * (dt/16.67);
+        e.rot += e.vrot * (dt/16.67);
+        if(e.y - e.size/2 > ROWS*CELL) e.life = 0;
       }
       if(e.life <= 0) effects.splice(i,1);
     }
@@ -889,6 +915,12 @@
         ctx.rotate(e.rot);
         ctx.fillStyle = e.color;
         ctx.fillRect(-e.size/2, -e.size/2, e.size, e.size*0.7);
+        ctx.restore();
+      } else if(e.kind === 'rain' && faceImgReady){
+        ctx.save();
+        ctx.translate(e.x, e.y);
+        ctx.rotate(e.rot);
+        ctx.drawImage(faceImg, -e.size/2, -e.size/2, e.size, e.size);
         ctx.restore();
       }
     }
