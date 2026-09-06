@@ -1626,8 +1626,8 @@
     if(e.code === 'KeyP'){ togglePause(); return; }
     if(paused) return;
     switch(e.code){
-      case 'ArrowLeft': move(-1); break;
-      case 'ArrowRight': move(1); break;
+      case 'ArrowLeft': if(!e.repeat){ move(-1); startMoveRepeat(-1); } break;
+      case 'ArrowRight': if(!e.repeat){ move(1); startMoveRepeat(1); } break;
       case 'ArrowUp': case 'KeyX': tryRotate(1); break;
       case 'KeyZ': case 'ControlLeft': case 'ControlRight': tryRotate(-1); break;
       case 'ArrowDown': if(!e.repeat){ softDrop(); startSoftDropRepeat(); } break;
@@ -1647,10 +1647,29 @@
   function stopSoftDropRepeat(){
     if(softDropInterval !== null){ clearInterval(softDropInterval); softDropInterval = null; }
   }
+
+  let horizDir = 0;
+  let horizInterval = null;
+  function startMoveRepeat(dir){
+    horizDir = dir;
+    if(horizInterval !== null){ clearInterval(horizInterval); }
+    horizInterval = setInterval(() => {
+      if(!started || paused || gameOver){ stopMoveRepeat(); return; }
+      move(horizDir);
+    }, 50);
+  }
+  function stopMoveRepeat(dir){
+    if(dir !== undefined && dir !== horizDir) return;
+    if(horizInterval !== null){ clearInterval(horizInterval); horizInterval = null; }
+    horizDir = 0;
+  }
   window.addEventListener('keyup', (e) => {
     if(e.code === 'ArrowDown') stopSoftDropRepeat();
+    if(e.code === 'ArrowLeft') stopMoveRepeat(-1);
+    if(e.code === 'ArrowRight') stopMoveRepeat(1);
   });
   window.addEventListener('blur', stopSoftDropRepeat);
+  window.addEventListener('blur', () => stopMoveRepeat());
 
   const touchControls = document.getElementById('touchControls');
   if(window.matchMedia && window.matchMedia('(pointer: coarse)').matches){
