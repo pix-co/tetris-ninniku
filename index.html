@@ -104,6 +104,9 @@
     gap:14px;
     width: 220px;
   }
+  .side-left{
+    width: 130px;
+  }
   .panel{
     background: var(--panel);
     border: 3px solid var(--outline-dark);
@@ -300,6 +303,7 @@
     width:100%;
   }
   .score-submit.hidden{ display:none; }
+  #timeRow.hidden{ display:none; }
   #nameInput{
     font-family:'Zen Maru Gothic', sans-serif;
     font-size:13px;
@@ -370,6 +374,13 @@
   </header>
 
   <div class="stage">
+    <div class="side side-left">
+      <div class="panel">
+        <h2>ネクスト</h2>
+        <div class="next-list" id="nextList"></div>
+      </div>
+    </div>
+
     <div class="board-shell" id="boardShell">
       <canvas id="board"></canvas>
       <div class="overlay hidden" id="overlay">
@@ -391,7 +402,7 @@
           <input type="text" id="nameInput" maxlength="12" placeholder="なまえ（12文字まで）">
           <button class="btn secondary" id="submitScoreBtn" type="button">ランキングに登録</button>
         </div>
-        <button class="btn" id="overlayBtn">はじめる</button>
+        <button class="btn" id="overlayBtn" type="button">はじめる</button>
       </div>
     </div>
 
@@ -406,18 +417,13 @@
         <div class="stat-row"><span>スコア</span><b id="score">0</b></div>
         <div class="stat-row"><span>ライン</span><b id="lines">0</b></div>
         <div class="stat-row"><span>レベル</span><b id="level">1</b></div>
-        <div class="stat-row"><span>タイム</span><b id="timeStat">0:00.0</b></div>
+        <div class="stat-row hidden" id="timeRow"><span>タイム</span><b id="timeStat">0:00.0</b></div>
         <div class="stat-row"><span>ハイスコア</span><b id="highscore">0</b></div>
       </div>
 
       <div class="panel">
         <h2>ホールド (C)</h2>
         <div class="mini-canvas-wrap"><canvas id="holdCanvas" width="80" height="60"></canvas></div>
-      </div>
-
-      <div class="panel">
-        <h2>ネクスト</h2>
-        <div class="next-list" id="nextList"></div>
       </div>
 
       <div class="panel">
@@ -500,6 +506,7 @@
   };
 
   const COLS = 10, ROWS = 20;
+  const NEXT_COUNT = 5;
   let CELL = 28;
 
   const boardShellEl = document.getElementById('boardShell');
@@ -512,6 +519,7 @@
   const linesEl = document.getElementById('lines');
   const levelEl = document.getElementById('level');
   const timeStatEl = document.getElementById('timeStat');
+  const timeRowEl = document.getElementById('timeRow');
   const highscoreEl = document.getElementById('highscore');
   const bubbleEl = document.getElementById('bubble');
   const overlayEl = document.getElementById('overlay');
@@ -623,7 +631,7 @@
   function initGame(){
     board = freshBoard();
     bag = [];
-    nextQueue = [nextFromBag(), nextFromBag(), nextFromBag()];
+    nextQueue = Array.from({ length: NEXT_COUNT }, () => nextFromBag());
     current = spawnPiece();
     holdType = null;
     holdUsed = false;
@@ -898,9 +906,6 @@
     overlayContext = 'gameover';
     const text = 'スコア: ' + score + '　ライン: ' + lines;
     showOverlay('ゲームオーバー', text, 'もう一度');
-    if(mode === 'marathon' && score > 0){
-      showScoreSubmit('marathon', score);
-    }
   }
 
   function triggerTAClear(){
@@ -1384,11 +1389,23 @@
   }
 
   function closeRanking(){
-    overlayContext = overlayEl.dataset.savedContext || 'start';
-    overlayTitleEl.textContent = overlayEl.dataset.savedTitle || 'スタート';
-    overlayTextEl.textContent = overlayEl.dataset.savedText || '';
-    overlayBtnEl.textContent = overlayEl.dataset.savedBtn || 'はじめる';
     rankingListEl.classList.add('hidden');
+    if(gameOver){
+      overlayContext = 'gameover';
+    } else if(started && paused){
+      overlayContext = 'pause';
+    } else {
+      overlayContext = 'start';
+    }
+    if(overlayContext === 'start'){
+      overlayTitleEl.textContent = 'スタート';
+      overlayTextEl.textContent = 'やじるしキーで うごかして、そろえよう！';
+      overlayBtnEl.textContent = 'はじめる';
+    } else {
+      overlayTitleEl.textContent = overlayEl.dataset.savedTitle || 'スタート';
+      overlayTextEl.textContent = overlayEl.dataset.savedText || '';
+      overlayBtnEl.textContent = overlayEl.dataset.savedBtn || 'はじめる';
+    }
     modeSelectEl.classList.toggle('hidden', overlayContext !== 'start' && overlayContext !== 'gameover');
     if(overlayEl.dataset.savedScoreSubmit === '1' && pendingSubmit){
       scoreSubmitEl.classList.remove('hidden');
@@ -1465,6 +1482,7 @@
   function updateModeButtons(){
     modeMarathonBtnEl.classList.toggle('active', mode === 'marathon');
     modeTaBtnEl.classList.toggle('active', mode === 'ta40');
+    timeRowEl.classList.toggle('hidden', mode !== 'ta40');
   }
   modeMarathonBtnEl.addEventListener('click', () => { mode = 'marathon'; updateModeButtons(); });
   modeTaBtnEl.addEventListener('click', () => { mode = 'ta40'; updateModeButtons(); });
@@ -1542,6 +1560,7 @@
 
   // ---------- Init ----------
   initGame();
+  updateModeButtons();
   resizeCanvas();
   updateHighScoreDisplay();
   requestAnimationFrame(loop);
