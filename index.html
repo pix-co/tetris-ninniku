@@ -331,6 +331,33 @@
     padding:14px 0;
     font-size:12px;
   }
+  .settings-panel{
+    width:100%;
+    text-align:left;
+  }
+  .settings-panel.hidden{ display:none; }
+  .settings-row{
+    margin-bottom:14px;
+  }
+  .settings-row:last-of-type{ margin-bottom:0; }
+  .settings-row label{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    font-size:12px;
+    font-weight:700;
+    color:var(--ink);
+    margin-bottom:6px;
+  }
+  .settings-row label .settings-val{
+    color:var(--terracotta);
+    font-weight:900;
+  }
+  .settings-row input[type="range"]{
+    width:100%;
+    accent-color: var(--golden);
+  }
+  #settingsResetBtn{ width:100%; margin-top:4px; }
   .score-submit{
     display:flex;
     flex-direction:column;
@@ -448,6 +475,21 @@
           <input type="text" id="nameInput" maxlength="12" placeholder="なまえ（12文字まで）">
           <button class="btn secondary" id="submitScoreBtn" type="button">ランキングに登録</button>
         </div>
+        <div class="settings-panel hidden" id="settingsPanel">
+          <div class="settings-row">
+            <label for="softDropRange">ソフトドロップ間隔 <span class="settings-val" id="softDropVal">50ms</span></label>
+            <input type="range" id="softDropRange" min="20" max="150" step="5">
+          </div>
+          <div class="settings-row">
+            <label for="dasRange">横移動 開始の遅延(DAS) <span class="settings-val" id="dasVal">170ms</span></label>
+            <input type="range" id="dasRange" min="0" max="300" step="10">
+          </div>
+          <div class="settings-row">
+            <label for="arrRange">横移動 連続移動間隔(ARR) <span class="settings-val" id="arrVal">40ms</span></label>
+            <input type="range" id="arrRange" min="0" max="100" step="5">
+          </div>
+          <button class="btn secondary" id="settingsResetBtn" type="button">初期値に戻す</button>
+        </div>
         <button class="btn" id="overlayBtn" type="button">はじめる</button>
         <button class="btn secondary hidden" id="overlayBackBtn" type="button">スタートに戻る</button>
       </div>
@@ -479,6 +521,7 @@
         </div>
         <div class="btn-row" style="margin-top:8px;">
           <button class="btn secondary" id="rankingBtn">ランキング</button>
+          <button class="btn secondary" id="settingsBtn">操作設定</button>
         </div>
       </div>
     </div>
@@ -577,6 +620,7 @@
   const pauseBtnEl = document.getElementById('pauseBtn');
   const restartBtnEl = document.getElementById('restartBtn');
   const rankingBtnEl = document.getElementById('rankingBtn');
+  const settingsBtnEl = document.getElementById('settingsBtn');
   const modeSelectEl = document.getElementById('modeSelect');
   const modeMarathonBtnEl = document.getElementById('modeMarathonBtn');
   const modeTaBtnEl = document.getElementById('modeTaBtn');
@@ -587,6 +631,14 @@
   const scoreSubmitEl = document.getElementById('scoreSubmit');
   const nameInputEl = document.getElementById('nameInput');
   const submitScoreBtnEl = document.getElementById('submitScoreBtn');
+  const settingsPanelEl = document.getElementById('settingsPanel');
+  const softDropRangeEl = document.getElementById('softDropRange');
+  const softDropValEl = document.getElementById('softDropVal');
+  const dasRangeEl = document.getElementById('dasRange');
+  const dasValEl = document.getElementById('dasVal');
+  const arrRangeEl = document.getElementById('arrRange');
+  const arrValEl = document.getElementById('arrVal');
+  const settingsResetBtnEl = document.getElementById('settingsResetBtn');
 
   // ---------- Face image (garlic face tile) ----------
   const faceImg = new Image();
@@ -629,9 +681,27 @@
   let lastKickIndex = null; // index of SRS kick used for the last successful rotation
   let mode = 'marathon'; // 'marathon' | 'ta40'
   let rankingViewMode = 'marathon';
-  let overlayContext = 'start'; // 'start' | 'pause' | 'gameover' | 'ranking'
+  let overlayContext = 'start'; // 'start' | 'pause' | 'gameover' | 'ranking' | 'settings'
   let gameoverFocusIndex = 0; // 0 = もう一度, 1 = スタートに戻る
   let runStartTime = null, pausedAccum = 0;
+
+  // ---------- Tunable controls (soft drop speed, horizontal DAS/ARR) ----------
+  const DEFAULT_CONTROLS = { softDropMs: 50, dasMs: 170, arrMs: 40 };
+  let controls = { ...DEFAULT_CONTROLS };
+  function loadControls(){
+    try{
+      const saved = JSON.parse(localStorage.getItem('ninniku-tetris-controls') || '{}');
+      controls = {
+        softDropMs: Number.isFinite(saved.softDropMs) ? saved.softDropMs : DEFAULT_CONTROLS.softDropMs,
+        dasMs: Number.isFinite(saved.dasMs) ? saved.dasMs : DEFAULT_CONTROLS.dasMs,
+        arrMs: Number.isFinite(saved.arrMs) ? saved.arrMs : DEFAULT_CONTROLS.arrMs,
+      };
+    }catch(e){ controls = { ...DEFAULT_CONTROLS }; }
+  }
+  function saveControls(){
+    try{ localStorage.setItem('ninniku-tetris-controls', JSON.stringify(controls)); }catch(e){ /* ignore */ }
+  }
+  loadControls();
 
   // effects
   let effects = [];
@@ -1002,6 +1072,7 @@
     modeSelectEl.classList.toggle('hidden', overlayContext !== 'start');
     overlayBackBtnEl.classList.toggle('hidden', overlayContext !== 'gameover');
     rankingListEl.classList.add('hidden');
+    settingsPanelEl.classList.add('hidden');
     hideScoreSubmit();
     if(overlayContext === 'gameover'){
       gameoverFocusIndex = 0;
@@ -1451,15 +1522,14 @@
   });
 
   function openRanking(){
-    if(started && !paused && !gameOver) togglePause();
-    const savedTitle = overlayTitleEl.textContent;
-    const savedText = overlayTextEl.textContent;
-    const savedBtn = overlayBtnEl.textContent;
-    overlayEl.dataset.savedTitle = savedTitle;
-    overlayEl.dataset.savedText = savedText;
-    overlayEl.dataset.savedBtn = savedBtn;
-    overlayEl.dataset.savedContext = overlayContext;
-    overlayEl.dataset.savedScoreSubmit = scoreSubmitEl.classList.contains('hidden') ? '0' : '1';
+    if(overlayContext !== 'ranking' && overlayContext !== 'settings'){
+      if(started && !paused && !gameOver) togglePause();
+      overlayEl.dataset.savedTitle = overlayTitleEl.textContent;
+      overlayEl.dataset.savedText = overlayTextEl.textContent;
+      overlayEl.dataset.savedBtn = overlayBtnEl.textContent;
+      overlayEl.dataset.savedContext = overlayContext;
+      overlayEl.dataset.savedScoreSubmit = scoreSubmitEl.classList.contains('hidden') ? '0' : '1';
+    }
     overlayContext = 'ranking';
     overlayTitleEl.textContent = 'ランキング';
     overlayTextEl.textContent = '';
@@ -1467,12 +1537,67 @@
     modeSelectEl.classList.add('hidden');
     overlayBackBtnEl.classList.add('hidden');
     scoreSubmitEl.classList.add('hidden');
+    settingsPanelEl.classList.add('hidden');
     rankingListEl.classList.remove('hidden');
     renderRankingList();
     overlayEl.classList.remove('hidden');
   }
 
   function closeRanking(){
+    if(gameOver){
+      overlayContext = 'gameover';
+    } else if(started && paused){
+      overlayContext = 'pause';
+    } else {
+      overlayContext = 'start';
+    }
+    const savedPendingSubmit = pendingSubmit;
+    if(overlayContext === 'start'){
+      showOverlay('スタート', 'やじるしキーで うごかして、そろえよう！', 'はじめる');
+    } else {
+      showOverlay(
+        overlayEl.dataset.savedTitle || 'スタート',
+        overlayEl.dataset.savedText || '',
+        overlayEl.dataset.savedBtn || 'はじめる'
+      );
+    }
+    if(overlayEl.dataset.savedScoreSubmit === '1' && savedPendingSubmit){
+      pendingSubmit = savedPendingSubmit;
+      scoreSubmitEl.classList.remove('hidden');
+    }
+  }
+
+  function refreshSettingsInputs(){
+    softDropRangeEl.value = controls.softDropMs;
+    softDropValEl.textContent = controls.softDropMs + 'ms';
+    dasRangeEl.value = controls.dasMs;
+    dasValEl.textContent = controls.dasMs + 'ms';
+    arrRangeEl.value = controls.arrMs;
+    arrValEl.textContent = controls.arrMs + 'ms';
+  }
+
+  function openSettings(){
+    if(overlayContext !== 'ranking' && overlayContext !== 'settings'){
+      if(started && !paused && !gameOver) togglePause();
+      overlayEl.dataset.savedTitle = overlayTitleEl.textContent;
+      overlayEl.dataset.savedText = overlayTextEl.textContent;
+      overlayEl.dataset.savedBtn = overlayBtnEl.textContent;
+      overlayEl.dataset.savedScoreSubmit = scoreSubmitEl.classList.contains('hidden') ? '0' : '1';
+    }
+    overlayContext = 'settings';
+    overlayTitleEl.textContent = '操作設定';
+    overlayTextEl.textContent = '';
+    overlayBtnEl.textContent = 'とじる';
+    modeSelectEl.classList.add('hidden');
+    overlayBackBtnEl.classList.add('hidden');
+    rankingListEl.classList.add('hidden');
+    scoreSubmitEl.classList.add('hidden');
+    refreshSettingsInputs();
+    settingsPanelEl.classList.remove('hidden');
+    overlayEl.classList.remove('hidden');
+  }
+
+  function closeSettings(){
     if(gameOver){
       overlayContext = 'gameover';
     } else if(started && paused){
@@ -1558,6 +1683,7 @@
   }
 
   overlayBtnEl.addEventListener('click', () => {
+    if(overlayContext === 'settings'){ closeSettings(); return; }
     if(overlayContext === 'ranking'){ closeRanking(); return; }
     if(overlayContext === 'pause'){ togglePause(); return; }
     startOrRestart();
@@ -1585,6 +1711,27 @@
   rankTabTaEl.addEventListener('click', () => { rankingViewMode = 'ta40'; renderRankingList(); });
   pauseBtnEl.addEventListener('click', togglePause);
   restartBtnEl.addEventListener('click', () => { initGame(); startOrRestart(); });
+  settingsBtnEl.addEventListener('click', openSettings);
+  settingsResetBtnEl.addEventListener('click', () => {
+    controls = { ...DEFAULT_CONTROLS };
+    saveControls();
+    refreshSettingsInputs();
+  });
+  softDropRangeEl.addEventListener('input', () => {
+    controls.softDropMs = Number(softDropRangeEl.value);
+    softDropValEl.textContent = controls.softDropMs + 'ms';
+    saveControls();
+  });
+  dasRangeEl.addEventListener('input', () => {
+    controls.dasMs = Number(dasRangeEl.value);
+    dasValEl.textContent = controls.dasMs + 'ms';
+    saveControls();
+  });
+  arrRangeEl.addEventListener('input', () => {
+    controls.arrMs = Number(arrRangeEl.value);
+    arrValEl.textContent = controls.arrMs + 'ms';
+    saveControls();
+  });
 
   window.addEventListener('keydown', (e) => {
     if(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
@@ -1626,8 +1773,8 @@
     if(e.code === 'KeyP'){ togglePause(); return; }
     if(paused) return;
     switch(e.code){
-      case 'ArrowLeft': move(-1); break;
-      case 'ArrowRight': move(1); break;
+      case 'ArrowLeft': if(!e.repeat){ move(-1); startMoveRepeat(-1); } break;
+      case 'ArrowRight': if(!e.repeat){ move(1); startMoveRepeat(1); } break;
       case 'ArrowUp': case 'KeyX': tryRotate(1); break;
       case 'KeyZ': case 'ControlLeft': case 'ControlRight': tryRotate(-1); break;
       case 'ArrowDown': if(!e.repeat){ softDrop(); startSoftDropRepeat(); } break;
@@ -1642,15 +1789,41 @@
     softDropInterval = setInterval(() => {
       if(!started || paused || gameOver){ stopSoftDropRepeat(); return; }
       softDrop();
-    }, 50);
+    }, controls.softDropMs);
   }
   function stopSoftDropRepeat(){
     if(softDropInterval !== null){ clearInterval(softDropInterval); softDropInterval = null; }
   }
+
+  let horizDir = 0;
+  let dasTimeout = null;
+  let arrInterval = null;
+  function clearMoveTimers(){
+    if(dasTimeout !== null){ clearTimeout(dasTimeout); dasTimeout = null; }
+    if(arrInterval !== null){ clearInterval(arrInterval); arrInterval = null; }
+  }
+  function startMoveRepeat(dir){
+    horizDir = dir;
+    clearMoveTimers();
+    dasTimeout = setTimeout(() => {
+      arrInterval = setInterval(() => {
+        if(!started || paused || gameOver){ stopMoveRepeat(); return; }
+        move(horizDir);
+      }, controls.arrMs);
+    }, controls.dasMs);
+  }
+  function stopMoveRepeat(dir){
+    if(dir !== undefined && dir !== horizDir) return;
+    clearMoveTimers();
+    horizDir = 0;
+  }
   window.addEventListener('keyup', (e) => {
     if(e.code === 'ArrowDown') stopSoftDropRepeat();
+    if(e.code === 'ArrowLeft') stopMoveRepeat(-1);
+    if(e.code === 'ArrowRight') stopMoveRepeat(1);
   });
   window.addEventListener('blur', stopSoftDropRepeat);
+  window.addEventListener('blur', () => stopMoveRepeat());
 
   const touchControls = document.getElementById('touchControls');
   if(window.matchMedia && window.matchMedia('(pointer: coarse)').matches){
