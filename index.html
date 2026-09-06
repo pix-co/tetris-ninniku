@@ -1552,6 +1552,10 @@
       e.preventDefault();
     }
     if(!started || gameOver){
+      if((overlayContext === 'start' || overlayContext === 'gameover')){
+        if(e.code === 'ArrowLeft'){ mode = 'marathon'; updateModeButtons(); return; }
+        if(e.code === 'ArrowRight'){ mode = 'ta40'; updateModeButtons(); return; }
+      }
       if(e.code === 'Enter' || e.code === 'Space'){ startOrRestart(); }
       return;
     }
