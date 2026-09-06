@@ -275,21 +275,48 @@
     list-style:none;
     margin:0;
     padding:0;
-    max-height: 220px;
+    max-height: 260px;
     overflow-y:auto;
     text-align:left;
   }
   #rankingEntries li{
     display:flex;
-    align-items:baseline;
+    align-items:center;
     gap:8px;
-    padding:4px 6px;
-    font-size:12px;
-    border-bottom:1px dashed var(--taupe);
+    padding:8px 8px;
+    font-size:13px;
+    border-bottom:1px solid rgba(140,124,110,0.25);
   }
-  .rank-no{ font-weight:900; color:var(--terracotta); width:2.6em; flex:none; }
-  .rank-name{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .rank-val{ font-weight:700; flex:none; }
+  #rankingEntries li:nth-child(even){
+    background: rgba(243,152,13,0.06);
+  }
+  .rank-no{
+    font-weight:900;
+    color:var(--terracotta);
+    width:2.2em;
+    flex:none;
+    font-size:13px;
+    text-align:center;
+  }
+  .rank-no.rank-gold{ color:#C8481A; font-size:16px; }
+  .rank-no.rank-silver{ color:#8C7C6E; font-size:15px; }
+  .rank-no.rank-bronze{ color:#B7792F; font-size:14px; }
+  .rank-name{
+    flex:1;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-weight:700;
+    color:var(--ink);
+    font-size:14px;
+  }
+  .rank-val{
+    font-weight:900;
+    flex:none;
+    color:var(--terracotta);
+    font-size:15px;
+    font-variant-numeric: tabular-nums;
+  }
   .rank-empty{
     color:var(--taupe);
     text-align:center;
@@ -1308,7 +1335,8 @@
       const li = document.createElement('li');
       const valueText = rankingViewMode === 'ta40' ? formatTime(e.value) : String(e.value);
       const noSpan = document.createElement('span');
-      noSpan.className = 'rank-no';
+      const medalClass = i === 0 ? ' rank-gold' : i === 1 ? ' rank-silver' : i === 2 ? ' rank-bronze' : '';
+      noSpan.className = 'rank-no' + medalClass;
       noSpan.textContent = (i+1) + '位';
       const nameSpan = document.createElement('span');
       nameSpan.className = 'rank-name';
@@ -1511,7 +1539,7 @@
       case 'ArrowUp': case 'KeyX': tryRotate(1); break;
       case 'KeyZ': case 'ControlLeft': case 'ControlRight': tryRotate(-1); break;
       case 'ArrowDown': softDrop(); break;
-      case 'Space': hardDrop(); break;
+      case 'Space': if(!e.repeat) hardDrop(); break;
       case 'KeyC': case 'ShiftLeft': case 'ShiftRight': holdSwap(); break;
     }
   });
