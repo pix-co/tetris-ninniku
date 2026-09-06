@@ -1473,7 +1473,6 @@
   }
 
   function closeRanking(){
-    rankingListEl.classList.add('hidden');
     if(gameOver){
       overlayContext = 'gameover';
     } else if(started && paused){
@@ -1481,18 +1480,18 @@
     } else {
       overlayContext = 'start';
     }
+    const savedPendingSubmit = pendingSubmit;
     if(overlayContext === 'start'){
-      overlayTitleEl.textContent = 'スタート';
-      overlayTextEl.textContent = 'やじるしキーで うごかして、そろえよう！';
-      overlayBtnEl.textContent = 'はじめる';
+      showOverlay('スタート', 'やじるしキーで うごかして、そろえよう！', 'はじめる');
     } else {
-      overlayTitleEl.textContent = overlayEl.dataset.savedTitle || 'スタート';
-      overlayTextEl.textContent = overlayEl.dataset.savedText || '';
-      overlayBtnEl.textContent = overlayEl.dataset.savedBtn || 'はじめる';
+      showOverlay(
+        overlayEl.dataset.savedTitle || 'スタート',
+        overlayEl.dataset.savedText || '',
+        overlayEl.dataset.savedBtn || 'はじめる'
+      );
     }
-    modeSelectEl.classList.toggle('hidden', overlayContext !== 'start');
-    overlayBackBtnEl.classList.toggle('hidden', overlayContext !== 'gameover');
-    if(overlayEl.dataset.savedScoreSubmit === '1' && pendingSubmit){
+    if(overlayEl.dataset.savedScoreSubmit === '1' && savedPendingSubmit){
+      pendingSubmit = savedPendingSubmit;
       scoreSubmitEl.classList.remove('hidden');
     }
   }
