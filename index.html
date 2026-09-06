@@ -938,7 +938,7 @@
     started = false;
     setBubble('おつかれさま！');
     overlayContext = 'gameover';
-    const text = 'スコア: ' + score + '　ライン: ' + lines;
+    const text = mode === 'ta40' ? ('ライン: ' + lines + ' / 40') : ('スコア: ' + score + '　ライン: ' + lines);
     showOverlay('ゲームオーバー', text, 'もう一度');
   }
 
@@ -961,7 +961,7 @@
 
   function updateStats(){
     scoreEl.textContent = score;
-    linesEl.textContent = lines;
+    linesEl.textContent = mode === 'ta40' ? Math.max(0, 40 - lines) : lines;
     levelEl.textContent = level;
   }
 
@@ -1530,6 +1530,7 @@
     scoreRowEl.classList.toggle('hidden', isTa);
     levelRowEl.classList.toggle('hidden', isTa);
     highscoreRowEl.classList.toggle('hidden', isTa);
+    updateStats();
   }
   modeMarathonBtnEl.addEventListener('click', () => { mode = 'marathon'; updateModeButtons(); });
   modeTaBtnEl.addEventListener('click', () => { mode = 'ta40'; updateModeButtons(); });
