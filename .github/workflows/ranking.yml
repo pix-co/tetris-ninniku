@@ -20,6 +20,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            const RANK_SIZE = 30;
             const body = context.payload.issue.body || '';
 
             const getField = (key) => {
@@ -65,7 +66,7 @@ jobs:
             const better = (a, b) => (mode === 'ta40' ? a < b : a > b);
             let rank = list.findIndex((e) => better(value, e.value));
             if (rank === -1) rank = list.length;
-            const madeIt = rank < 10;
+            const madeIt = rank < RANK_SIZE;
 
             let comment;
             if (madeIt) {
@@ -74,11 +75,11 @@ jobs:
                 value,
                 date: new Date().toISOString().slice(0, 10),
               });
-              list = list.slice(0, 10);
+              list = list.slice(0, RANK_SIZE);
               fs.writeFileSync(file, JSON.stringify(list, null, 2) + '\n');
               comment = 'ランキング ' + (rank + 1) + ' 位にランクインしました！反映まで数分お待ちください。';
             } else {
-              comment = '記録しました（順位 ' + (rank + 1) + ' 位、トップ10には届きませんでした）。';
+              comment = '記録しました（順位 ' + (rank + 1) + ' 位、トップ' + RANK_SIZE + 'には届きませんでした）。';
             }
 
             await github.rest.issues.createComment({
