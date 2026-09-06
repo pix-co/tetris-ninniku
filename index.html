@@ -81,6 +81,7 @@
     padding: 10px;
     box-shadow: 0 8px 0 var(--shadow);
     transition: transform 0.05s ease;
+    touch-action: none;
   }
   .board-shell.shake{
     animation: shakeAnim 0.32s ease;
@@ -928,7 +929,9 @@
       const newLevel = Math.floor(lines/10) + 1;
       if(newLevel !== level){
         level = newLevel;
-        dropInterval = Math.max(120, 1000 - (level-1)*70);
+        if(mode === 'marathon'){
+          dropInterval = Math.max(120, 1000 - (level-1)*70);
+        }
       }
       updateStats();
       if(mode === 'ta40' && lines >= 40 && !gameOver){
@@ -1662,6 +1665,54 @@
   bindTap('tcDown', () => softDrop(), {repeat:true});
   bindTap('tcDrop', () => hardDrop());
   bindTap('tcHold', () => holdSwap());
+
+  // ---------- Swipe / tap gestures on the board ----------
+  let swipeStartX = 0, swipeStartY = 0, swipeLastX = 0, swipeLastY = 0, swipeStartTime = 0, swipeMoved = false;
+  const canPlayGesture = () => started && !paused && !gameOver;
+
+  boardShellEl.addEventListener('touchstart', (e) => {
+    if(!canPlayGesture() || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    swipeStartX = swipeLastX = t.clientX;
+    swipeStartY = swipeLastY = t.clientY;
+    swipeStartTime = performance.now();
+    swipeMoved = false;
+  }, { passive: true });
+
+  boardShellEl.addEventListener('touchmove', (e) => {
+    if(!canPlayGesture() || e.touches.length !== 1) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const step = Math.max(14, CELL * 0.6);
+    let dx = t.clientX - swipeLastX;
+    while(Math.abs(dx) >= step){
+      move(dx > 0 ? 1 : -1);
+      swipeLastX += dx > 0 ? step : -step;
+      dx = t.clientX - swipeLastX;
+      swipeMoved = true;
+    }
+    let dy = t.clientY - swipeLastY;
+    while(dy >= step){
+      softDrop();
+      swipeLastY += step;
+      dy = t.clientY - swipeLastY;
+      swipeMoved = true;
+    }
+  }, { passive: false });
+
+  boardShellEl.addEventListener('touchend', () => {
+    if(!canPlayGesture()) return;
+    const dt = performance.now() - swipeStartTime;
+    const totalDx = swipeLastX - swipeStartX;
+    const totalDy = swipeLastY - swipeStartY;
+    if(!swipeMoved && dt < 250){
+      tryRotate(1);
+      return;
+    }
+    if(dt < 250 && totalDy > CELL * 2 && totalDy > Math.abs(totalDx)){
+      hardDrop();
+    }
+  }, { passive: true });
 
   window.addEventListener('resize', resizeCanvas);
   window.addEventListener('orientationchange', resizeCanvas);
