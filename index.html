@@ -285,13 +285,33 @@
     border-bottom:1px dashed var(--taupe);
   }
   .rank-no{ font-weight:900; color:var(--terracotta); width:2.6em; flex:none; }
-  .rank-val{ font-weight:700; flex:1; }
-  .rank-date{ color:var(--taupe); font-size:11px; flex:none; }
+  .rank-name{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rank-val{ font-weight:700; flex:none; }
   .rank-empty{
     color:var(--taupe);
     text-align:center;
     padding:14px 0;
     font-size:12px;
+  }
+  .score-submit{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    width:100%;
+  }
+  .score-submit.hidden{ display:none; }
+  #nameInput{
+    font-family:'Zen Maru Gothic', sans-serif;
+    font-size:13px;
+    padding:8px 10px;
+    border: 3px solid var(--outline-dark);
+    border-radius: 10px;
+    color: var(--ink);
+    width:100%;
+  }
+  #submitScoreBtn{ width:100%; }
+  #submitScoreBtn:disabled{
+    opacity:0.6;
   }
   .touch-controls{
     display:none;
@@ -366,6 +386,10 @@
             <button class="btn secondary rank-tab" id="rankTabTa" type="button">40ライン TA</button>
           </div>
           <ol id="rankingEntries"></ol>
+        </div>
+        <div class="score-submit hidden" id="scoreSubmit">
+          <input type="text" id="nameInput" maxlength="12" placeholder="なまえ（12文字まで）">
+          <button class="btn secondary" id="submitScoreBtn" type="button">ランキングに登録</button>
         </div>
         <button class="btn" id="overlayBtn">はじめる</button>
       </div>
@@ -504,6 +528,9 @@
   const rankTabMarathonEl = document.getElementById('rankTabMarathon');
   const rankTabTaEl = document.getElementById('rankTabTa');
   const rankingEntriesEl = document.getElementById('rankingEntries');
+  const scoreSubmitEl = document.getElementById('scoreSubmit');
+  const nameInputEl = document.getElementById('nameInput');
+  const submitScoreBtnEl = document.getElementById('submitScoreBtn');
 
   // ---------- Face image (garlic face tile) ----------
   const faceImg = new Image();
@@ -869,13 +896,11 @@
     started = false;
     setBubble('おつかれさま！');
     overlayContext = 'gameover';
-    let text = 'スコア: ' + score + '　ライン: ' + lines;
-    if(mode === 'marathon'){
-      const result = submitScore('marathon', score);
-      updateHighScoreDisplay();
-      if(result.madeIt) text += '　ランキング ' + result.rank + '位！';
-    }
+    const text = 'スコア: ' + score + '　ライン: ' + lines;
     showOverlay('ゲームオーバー', text, 'もう一度');
+    if(mode === 'marathon' && score > 0){
+      showScoreSubmit('marathon', score);
+    }
   }
 
   function triggerTAClear(){
@@ -886,10 +911,9 @@
     setBubble('やったね！クリア！');
     overlayContext = 'gameover';
     const finalMs = getElapsedMs();
-    const result = submitScore('ta40', finalMs);
-    let text = 'タイム: ' + formatTime(finalMs);
-    if(result.madeIt) text += '　ランキング ' + result.rank + '位！';
+    const text = 'タイム: ' + formatTime(finalMs);
     showOverlay('40ライン クリア！', text, 'もう一度');
+    showScoreSubmit('ta40', finalMs);
     spawnBigText('クリア!!', '#F3980D');
     spawnBurst(60);
     spawnCharacterRain(20);
@@ -912,6 +936,7 @@
     overlayBtnEl.textContent = btnLabel;
     modeSelectEl.classList.toggle('hidden', overlayContext !== 'start' && overlayContext !== 'gameover');
     rankingListEl.classList.add('hidden');
+    hideScoreSubmit();
     overlayEl.classList.remove('hidden');
   }
   function hideOverlay(){
@@ -1230,50 +1255,44 @@
     requestAnimationFrame(loop);
   }
 
-  // ---------- Storage / ranking ----------
-  const RANK_KEY = { marathon: 'ninniku-tetris-ranking-marathon', ta40: 'ninniku-tetris-ranking-ta40' };
-  const RANK_SIZE = 10;
+  // ---------- Ranking (shared, backed by GitHub Issues + Actions) ----------
+  const RANKING_REPO = 'pix-co/tetris-ninniku';
+  const RANKING_FILES = { marathon: 'ranking-marathon.json', ta40: 'ranking-ta40.json' };
+  let pendingSubmit = null;
 
-  function loadRanking(m){
+  async function fetchRanking(m){
     try{
-      const raw = localStorage.getItem(RANK_KEY[m]);
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    }catch(e){ return []; }
+      const res = await fetch(RANKING_FILES[m], { cache: 'no-store' });
+      if(!res.ok) return null;
+      const list = await res.json();
+      return Array.isArray(list) ? list : [];
+    }catch(e){ return null; }
   }
 
-  function saveRankingList(m, list){
-    try{ localStorage.setItem(RANK_KEY[m], JSON.stringify(list)); }catch(e){ /* ignore storage errors */ }
+  async function updateHighScoreDisplay(){
+    const list = await fetchRanking('marathon');
+    highscoreEl.textContent = (list && list.length) ? list[0].value : '-';
   }
 
-  function todayStr(){
-    const d = new Date();
-    return d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0');
-  }
-
-  function submitScore(m, value){
-    const list = loadRanking(m);
-    const better = (a,b) => m === 'ta40' ? a < b : a > b;
-    let rank = list.findIndex(e => better(value, e.value));
-    if(rank === -1) rank = list.length;
-    const madeIt = rank < RANK_SIZE;
-    if(madeIt){
-      list.splice(rank, 0, { value, date: todayStr() });
-      saveRankingList(m, list.slice(0, RANK_SIZE));
-    }
-    return { madeIt, rank: rank + 1 };
-  }
-
-  function updateHighScoreDisplay(){
-    const list = loadRanking('marathon');
-    highscoreEl.textContent = list.length ? list[0].value : 0;
-  }
-
-  function renderRankingList(){
+  async function renderRankingList(){
     rankTabMarathonEl.classList.toggle('active', rankingViewMode === 'marathon');
     rankTabTaEl.classList.toggle('active', rankingViewMode === 'ta40');
-    const list = loadRanking(rankingViewMode);
     rankingEntriesEl.innerHTML = '';
+    const loadingLi = document.createElement('li');
+    loadingLi.textContent = '読み込み中…';
+    loadingLi.className = 'rank-empty';
+    rankingEntriesEl.appendChild(loadingLi);
+    const myRequestMode = rankingViewMode;
+    const list = await fetchRanking(myRequestMode);
+    if(rankingViewMode !== myRequestMode) return; // tab switched while loading
+    rankingEntriesEl.innerHTML = '';
+    if(list === null){
+      const li = document.createElement('li');
+      li.textContent = 'ランキングを取得できませんでした';
+      li.className = 'rank-empty';
+      rankingEntriesEl.appendChild(li);
+      return;
+    }
     if(list.length === 0){
       const li = document.createElement('li');
       li.textContent = 'まだ記録がありません';
@@ -1287,16 +1306,51 @@
       const noSpan = document.createElement('span');
       noSpan.className = 'rank-no';
       noSpan.textContent = (i+1) + '位';
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'rank-name';
+      nameSpan.textContent = e.name || '名無しさん';
       const valSpan = document.createElement('span');
       valSpan.className = 'rank-val';
       valSpan.textContent = valueText;
-      const dateSpan = document.createElement('span');
-      dateSpan.className = 'rank-date';
-      dateSpan.textContent = e.date || '';
-      li.append(noSpan, valSpan, dateSpan);
+      li.append(noSpan, nameSpan, valSpan);
       rankingEntriesEl.appendChild(li);
     });
   }
+
+  function buildIssueUrl(mode, value, name){
+    const body = 'mode: ' + mode + '\nvalue: ' + Math.round(value) + '\nname: ' + name;
+    const params = new URLSearchParams({
+      title: 'ランキング登録: ' + name,
+      labels: 'ranking',
+      body,
+    });
+    return 'https://github.com/' + RANKING_REPO + '/issues/new?' + params.toString();
+  }
+
+  function showScoreSubmit(mode, value){
+    pendingSubmit = { mode, value };
+    let savedName = '';
+    try{ savedName = localStorage.getItem('ninniku-tetris-playername') || ''; }catch(e){ /* ignore */ }
+    nameInputEl.value = savedName;
+    submitScoreBtnEl.textContent = 'ランキングに登録';
+    submitScoreBtnEl.disabled = false;
+    scoreSubmitEl.classList.remove('hidden');
+  }
+
+  function hideScoreSubmit(){
+    pendingSubmit = null;
+    scoreSubmitEl.classList.add('hidden');
+  }
+
+  submitScoreBtnEl.addEventListener('click', () => {
+    if(!pendingSubmit) return;
+    let name = nameInputEl.value.replace(/[\r\n]/g, '').trim().slice(0, 12);
+    if(!name) name = '名無しさん';
+    try{ localStorage.setItem('ninniku-tetris-playername', name); }catch(e){ /* ignore */ }
+    window.open(buildIssueUrl(pendingSubmit.mode, pendingSubmit.value, name), '_blank', 'noopener');
+    submitScoreBtnEl.textContent = '登録ページを開きました';
+    submitScoreBtnEl.disabled = true;
+  });
 
   function openRanking(){
     if(started && !paused && !gameOver) togglePause();
@@ -1307,11 +1361,13 @@
     overlayEl.dataset.savedText = savedText;
     overlayEl.dataset.savedBtn = savedBtn;
     overlayEl.dataset.savedContext = overlayContext;
+    overlayEl.dataset.savedScoreSubmit = scoreSubmitEl.classList.contains('hidden') ? '0' : '1';
     overlayContext = 'ranking';
     overlayTitleEl.textContent = 'ランキング';
     overlayTextEl.textContent = '';
     overlayBtnEl.textContent = 'とじる';
     modeSelectEl.classList.add('hidden');
+    scoreSubmitEl.classList.add('hidden');
     rankingListEl.classList.remove('hidden');
     renderRankingList();
     overlayEl.classList.remove('hidden');
@@ -1324,6 +1380,9 @@
     overlayBtnEl.textContent = overlayEl.dataset.savedBtn || 'はじめる';
     rankingListEl.classList.add('hidden');
     modeSelectEl.classList.toggle('hidden', overlayContext !== 'start' && overlayContext !== 'gameover');
+    if(overlayEl.dataset.savedScoreSubmit === '1' && pendingSubmit){
+      scoreSubmitEl.classList.remove('hidden');
+    }
   }
 
   function formatTime(ms){
