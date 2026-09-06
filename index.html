@@ -331,7 +331,7 @@
   }
   .score-submit.hidden{ display:none; }
   #timeRow.hidden{ display:none; }
-  #scoreRow.hidden, #levelRow.hidden, #highscoreRow.hidden{ display:none; }
+  #scoreRow.hidden, #levelRow.hidden{ display:none; }
   #overlayBackBtn.hidden{ display:none; }
   .gameover-selected{
     background: var(--golden) !important;
@@ -457,7 +457,6 @@
         <div class="stat-row"><span>ライン</span><b id="lines">0</b></div>
         <div class="stat-row" id="levelRow"><span>レベル</span><b id="level">1</b></div>
         <div class="stat-row hidden" id="timeRow"><span>タイム</span><b id="timeStat">0:00.0</b></div>
-        <div class="stat-row" id="highscoreRow"><span>ハイスコア</span><b id="highscore">0</b></div>
       </div>
 
       <div class="panel">
@@ -561,8 +560,6 @@
   const timeRowEl = document.getElementById('timeRow');
   const scoreRowEl = document.getElementById('scoreRow');
   const levelRowEl = document.getElementById('levelRow');
-  const highscoreRowEl = document.getElementById('highscoreRow');
-  const highscoreEl = document.getElementById('highscore');
   const bubbleEl = document.getElementById('bubble');
   const overlayEl = document.getElementById('overlay');
   const overlayTitleEl = document.getElementById('overlayTitle');
@@ -1332,11 +1329,6 @@
     }catch(e){ return null; }
   }
 
-  async function updateHighScoreDisplay(){
-    const list = await fetchRanking('marathon');
-    highscoreEl.textContent = (list && list.length) ? list[0].value : '-';
-  }
-
   async function renderRankingList(){
     rankTabMarathonEl.classList.toggle('active', rankingViewMode === 'marathon');
     rankTabTaEl.classList.toggle('active', rankingViewMode === 'ta40');
@@ -1553,7 +1545,6 @@
     timeRowEl.classList.toggle('hidden', !isTa);
     scoreRowEl.classList.toggle('hidden', isTa);
     levelRowEl.classList.toggle('hidden', isTa);
-    highscoreRowEl.classList.toggle('hidden', isTa);
     updateStats();
   }
   modeMarathonBtnEl.addEventListener('click', () => { mode = 'marathon'; updateModeButtons(); });
@@ -1656,7 +1647,6 @@
   initGame();
   updateModeButtons();
   resizeCanvas();
-  updateHighScoreDisplay();
   requestAnimationFrame(loop);
 })();
 </script>
