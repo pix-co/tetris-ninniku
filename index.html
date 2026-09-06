@@ -939,7 +939,7 @@
     overlayTitleEl.textContent = title;
     overlayTextEl.textContent = text;
     overlayBtnEl.textContent = btnLabel;
-    modeSelectEl.classList.toggle('hidden', overlayContext !== 'start' && overlayContext !== 'gameover');
+    modeSelectEl.classList.toggle('hidden', overlayContext !== 'start');
     rankingListEl.classList.add('hidden');
     hideScoreSubmit();
     overlayEl.classList.remove('hidden');
@@ -1406,7 +1406,7 @@
       overlayTextEl.textContent = overlayEl.dataset.savedText || '';
       overlayBtnEl.textContent = overlayEl.dataset.savedBtn || 'はじめる';
     }
-    modeSelectEl.classList.toggle('hidden', overlayContext !== 'start' && overlayContext !== 'gameover');
+    modeSelectEl.classList.toggle('hidden', overlayContext !== 'start');
     if(overlayEl.dataset.savedScoreSubmit === '1' && pendingSubmit){
       scoreSubmitEl.classList.remove('hidden');
     }
@@ -1476,6 +1476,7 @@
   overlayBtnEl.addEventListener('click', () => {
     if(overlayContext === 'ranking'){ closeRanking(); return; }
     if(overlayContext === 'pause'){ togglePause(); return; }
+    if(overlayContext === 'gameover'){ initGame(); updateModeButtons(); return; }
     startOrRestart();
   });
 
