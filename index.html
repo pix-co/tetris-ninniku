@@ -1542,6 +1542,11 @@
 
   window.addEventListener('keydown', (e) => {
     if(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if(e.code === 'Escape' && started && !gameOver){
+      initGame();
+      updateModeButtons();
+      return;
+    }
     if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)){
       e.preventDefault();
     }
