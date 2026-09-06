@@ -387,6 +387,29 @@
     L: [[0,0,1],[1,1,1],[0,0,0]],
   };
 
+  // SRS wall-kick offsets, keyed "fromRot>toRot" (rot: 0=spawn,1=R,2=180,3=L).
+  // Each entry is a list of [dCol, dRow] candidates tried in order (row+ is down).
+  const JLSTZ_KICKS = {
+    '0>1': [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    '1>0': [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+    '1>2': [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+    '2>1': [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    '2>3': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
+    '3>2': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    '3>0': [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    '0>3': [[0,0],[1,0],[1,-1],[0,2],[1,2]],
+  };
+  const I_KICKS = {
+    '0>1': [[0,0],[-2,0],[1,0],[-2,1],[1,-2]],
+    '1>0': [[0,0],[2,0],[-1,0],[2,-1],[-1,2]],
+    '1>2': [[0,0],[-1,0],[2,0],[-1,-2],[2,1]],
+    '2>1': [[0,0],[1,0],[-2,0],[1,2],[-2,-1]],
+    '2>3': [[0,0],[2,0],[-1,0],[2,-1],[-1,2]],
+    '3>2': [[0,0],[-2,0],[1,0],[-2,1],[1,-2]],
+    '3>0': [[0,0],[1,0],[-2,0],[1,2],[-2,-1]],
+    '0>3': [[0,0],[-1,0],[2,0],[-1,-2],[2,1]],
+  };
+
   const COLS = 10, ROWS = 20;
   let CELL = 28;
 
@@ -438,6 +461,7 @@
   let paused, gameOver, started;
   let lockTimer = null, lockResets = 0, lockDeadline = null, lockRemaining = null, pauseStartedAt = null;
   let lastAction = null; // 'rotate' | 'move' | null
+  let lastKickIndex = null; // index of SRS kick used for the last successful rotation
 
   // effects
   let effects = [];
@@ -472,6 +496,7 @@
     return {
       type,
       matrix: SHAPES[type].map(row => row.slice()),
+      rot: 0,
       row: 0,
       col: Math.floor((COLS - SHAPES[type][0].length)/2),
     };
@@ -497,7 +522,7 @@
     lastTime = performance.now();
     paused = false; gameOver = false; started = false;
     lockTimer = null; lockResets = 0; lockDeadline = null; lockRemaining = null; pauseStartedAt = null;
-    lastAction = null;
+    lastAction = null; lastKickIndex = null;
     effects = [];
     shakeUntil = 0;
     updateStats();
@@ -546,12 +571,20 @@
   function tryRotate(dir){
     if(current.type === 'O' || gameOver || paused) return;
     const rotated = dir === -1 ? rotateMatrixCCW(current.matrix) : rotateMatrixCW(current.matrix);
-    const kicks = [0, -1, 1, -2, 2];
-    for(const k of kicks){
-      if(!collides(rotated, current.row, current.col + k)){
+    const fromRot = current.rot;
+    const toRot = (fromRot + dir + 4) % 4;
+    const table = current.type === 'I' ? I_KICKS : JLSTZ_KICKS;
+    const kicks = table[`${fromRot}>${toRot}`];
+    for(let i=0;i<kicks.length;i++){
+      const [dCol, dRow] = kicks[i];
+      const newRow = current.row + dRow, newCol = current.col + dCol;
+      if(!collides(rotated, newRow, newCol)){
         current.matrix = rotated;
-        current.col += k;
+        current.row = newRow;
+        current.col = newCol;
+        current.rot = toRot;
         lastAction = 'rotate';
+        lastKickIndex = i;
         resetLockIfGrounded();
         draw();
         return;
@@ -584,6 +617,7 @@
     if(!collides(current.matrix, current.row, current.col+dx)){
       current.col += dx;
       lastAction = 'move';
+      lastKickIndex = null;
       resetLockIfGrounded();
       draw();
     }
@@ -594,6 +628,7 @@
     if(!collides(current.matrix, current.row+1, current.col)){
       current.row++;
       lastAction = 'move';
+      lastKickIndex = null;
       score += 1;
       updateStats();
       draw();
@@ -648,7 +683,7 @@
     else if(point==='left') front=[tl,bl];
     else front=[tr,br];
     const frontFilled = front.filter(Boolean).length;
-    return frontFilled === 2 ? 'full' : 'mini';
+    return (frontFilled === 2 || lastKickIndex === 4) ? 'full' : 'mini';
   }
 
   function lockPiece(){
@@ -671,6 +706,7 @@
     clearLines(tspin);
     holdUsed = false;
     lastAction = null;
+    lastKickIndex = null;
     current = spawnPiece();
     renderNext();
     if(collides(current.matrix, current.row, current.col)){
