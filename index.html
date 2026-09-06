@@ -960,6 +960,7 @@
     overlayContext = 'gameover';
     const text = mode === 'ta40' ? ('ライン: ' + lines + ' / 40') : ('スコア: ' + score + '　ライン: ' + lines);
     showOverlay('ゲームオーバー', text, 'もう一度');
+    if(mode === 'marathon'){ showScoreSubmit('marathon', score); }
   }
 
   function triggerTAClear(){
