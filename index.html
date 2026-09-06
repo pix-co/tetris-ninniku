@@ -1630,11 +1630,27 @@
       case 'ArrowRight': move(1); break;
       case 'ArrowUp': case 'KeyX': tryRotate(1); break;
       case 'KeyZ': case 'ControlLeft': case 'ControlRight': tryRotate(-1); break;
-      case 'ArrowDown': softDrop(); break;
+      case 'ArrowDown': if(!e.repeat){ softDrop(); startSoftDropRepeat(); } break;
       case 'Space': if(!e.repeat) hardDrop(); break;
       case 'KeyC': case 'ShiftLeft': case 'ShiftRight': holdSwap(); break;
     }
   });
+
+  let softDropInterval = null;
+  function startSoftDropRepeat(){
+    if(softDropInterval !== null) return;
+    softDropInterval = setInterval(() => {
+      if(!started || paused || gameOver){ stopSoftDropRepeat(); return; }
+      softDrop();
+    }, 50);
+  }
+  function stopSoftDropRepeat(){
+    if(softDropInterval !== null){ clearInterval(softDropInterval); softDropInterval = null; }
+  }
+  window.addEventListener('keyup', (e) => {
+    if(e.code === 'ArrowDown') stopSoftDropRepeat();
+  });
+  window.addEventListener('blur', stopSoftDropRepeat);
 
   const touchControls = document.getElementById('touchControls');
   if(window.matchMedia && window.matchMedia('(pointer: coarse)').matches){
