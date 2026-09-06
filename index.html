@@ -436,7 +436,7 @@
   let board, current, bag, nextQueue, holdType, holdUsed;
   let score, lines, level, dropInterval, lastTime;
   let paused, gameOver, started;
-  let lockTimer = null, lockResets = 0;
+  let lockTimer = null, lockResets = 0, lockDeadline = null, lockRemaining = null, pauseStartedAt = null;
   let lastAction = null; // 'rotate' | 'move' | null
 
   // effects
@@ -496,7 +496,7 @@
     dropInterval = 1000;
     lastTime = performance.now();
     paused = false; gameOver = false; started = false;
-    lockTimer = null; lockResets = 0;
+    lockTimer = null; lockResets = 0; lockDeadline = null; lockRemaining = null; pauseStartedAt = null;
     lastAction = null;
     effects = [];
     shakeUntil = 0;
@@ -568,11 +568,13 @@
       if(lockTimer !== null && lockResets < 12){
         clearTimeout(lockTimer);
         lockResets++;
+        lockDeadline = performance.now() + 500;
         lockTimer = setTimeout(lockPiece, 500);
       }
     } else if(lockTimer !== null){
       clearTimeout(lockTimer);
       lockTimer = null;
+      lockDeadline = null;
       lockResets = 0;
     }
   }
@@ -615,6 +617,7 @@
 
   function scheduleLock(){
     if(lockTimer !== null) return;
+    lockDeadline = performance.now() + 500;
     lockTimer = setTimeout(lockPiece, 500);
   }
 
@@ -651,6 +654,7 @@
   function lockPiece(){
     clearTimeout(lockTimer);
     lockTimer = null;
+    lockDeadline = null;
     lockResets = 0;
 
     const tspin = detectTSpin();
@@ -1029,7 +1033,7 @@
           scheduleLock();
         }
       }
-    } else {
+    } else if(!paused){
       lastTime = time;
     }
     draw();
@@ -1081,10 +1085,25 @@
     if(paused){
       setBubble('きゅうけい中…');
       showOverlay('一時停止', 'つづきは「再開」ボタンで', '再開する');
+      pauseStartedAt = performance.now();
+      if(lockTimer !== null){
+        clearTimeout(lockTimer);
+        lockTimer = null;
+        lockRemaining = Math.max(0, lockDeadline - pauseStartedAt);
+      }
     } else {
       setBubble('がんばって〜！');
       hideOverlay();
-      lastTime = performance.now();
+      const now = performance.now();
+      if(pauseStartedAt !== null){
+        lastTime += now - pauseStartedAt;
+        pauseStartedAt = null;
+      }
+      if(lockRemaining !== null){
+        lockDeadline = now + lockRemaining;
+        lockTimer = setTimeout(lockPiece, lockRemaining);
+        lockRemaining = null;
+      }
     }
   }
 
