@@ -1144,10 +1144,10 @@
       const pcBonus = [0, 800, 1200, 1800, 2000][cleared] * level;
       score += pcBonus;
       setBubble('パーフェクトクリア！！');
+      spawnCharacterSpin();
       spawnBigText('PERFECT CLEAR!!', '#F3980D');
       spawnBurst(90);
       triggerShake();
-      spawnCharacterRain(24);
     }
 
     if(cleared > 0){
@@ -1344,6 +1344,20 @@
     }
   }
 
+  function spawnCharacterSpin(){
+    const size = CELL * 6.5;
+    effects.push({
+      kind:'spin',
+      x: (COLS*CELL)/2,
+      y: (ROWS*CELL)/2,
+      size,
+      w: size * (379/400),
+      rot: 0,
+      vrot: 0.22,
+      life: 1500, maxLife: 1500,
+    });
+  }
+
   function triggerShake(){
     shakeUntil = performance.now() + 320;
     boardShellEl.classList.remove('shake');
@@ -1365,6 +1379,8 @@
         e.y += e.vy * (dt/16.67);
         e.rot += e.vrot * (dt/16.67);
         if(e.y - e.size/2 > ROWS*CELL) e.life = 0;
+      } else if(e.kind === 'spin'){
+        e.rot += e.vrot * (dt/16.67);
       }
       if(e.life <= 0) effects.splice(i,1);
     }
@@ -1411,6 +1427,15 @@
         ctx.rotate(e.rot);
         ctx.fillStyle = e.color;
         ctx.fillRect(-e.size/2, -e.size/2, e.size, e.size*0.7);
+        ctx.restore();
+      } else if(e.kind === 'spin' && bodyImgReady){
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, t*2.5);
+        const scale = 0.7 + (1-t)*0.35;
+        ctx.translate(e.x, e.y);
+        ctx.rotate(e.rot);
+        ctx.scale(scale, scale);
+        ctx.drawImage(bodyImg, -e.w/2, -e.size/2, e.w, e.size);
         ctx.restore();
       } else if(e.kind === 'rain' && bodyImgReady){
         ctx.save();
