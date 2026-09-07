@@ -586,7 +586,7 @@
           <button class="btn secondary" id="settingsBtn">操作設定</button>
         </div>
         <div class="btn-row" style="margin-top:8px;">
-          <button class="btn secondary" id="popupBtn">配信用ウィンドウ</button>
+          <button class="btn secondary" id="popupBtn">ポップアップで開く</button>
         </div>
       </div>
     </div>
@@ -1975,7 +1975,7 @@
   restartBtnEl.addEventListener('click', () => { initGame(); startOrRestart(); });
   settingsBtnEl.addEventListener('click', openSettings);
   popupBtnEl.addEventListener('click', () => {
-    const w = 440, h = 900;
+    const w = 900, h = 980;
     const left = Math.round((window.screen.width - w) / 2);
     const top = Math.round((window.screen.height - h) / 2);
     window.open(
