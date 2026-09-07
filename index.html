@@ -2105,6 +2105,46 @@
   window.addEventListener('blur', stopSoftDropRepeat);
   window.addEventListener('blur', () => stopMoveRepeat());
 
+  // ---------- Hidden easter egg: Namco command ----------
+  const NAMCO_EASTER_EGG_LINES = [
+    'にんにくは畑のスタミナ源やで！',
+    'このゲーム、実は筆者が徹夜で作ってん',
+    'そろそろ油につけて素揚げにされそう',
+    'テトリスよりオムライス食べたい気分',
+    'ライン消すたび筋肉痛やねん',
+    '必殺技の名前は「ロースト」',
+    '臭いは気にしいひんタイプです',
+    'そろそろCMやから見といてな',
+  ];
+  const NAMCO_CODE = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
+  let namcoBuffer = [];
+  let namcoEasterEggTimer = null;
+  function triggerNamcoEasterEgg(){
+    if(namcoEasterEggTimer !== null) return;
+    const lines = [...NAMCO_EASTER_EGG_LINES].sort(() => Math.random() - 0.5);
+    let i = 0;
+    setBubble(lines[0]);
+    spawnBurst(40);
+    namcoEasterEggTimer = setInterval(() => {
+      i++;
+      if(i >= lines.length){
+        clearInterval(namcoEasterEggTimer);
+        namcoEasterEggTimer = null;
+        return;
+      }
+      setBubble(lines[i]);
+    }, 1400);
+  }
+  window.addEventListener('keydown', (e) => {
+    if(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    namcoBuffer.push(e.code);
+    if(namcoBuffer.length > NAMCO_CODE.length) namcoBuffer.shift();
+    if(namcoBuffer.length === NAMCO_CODE.length && namcoBuffer.every((c,i) => c === NAMCO_CODE[i])){
+      namcoBuffer = [];
+      triggerNamcoEasterEgg();
+    }
+  });
+
   const touchControls = document.getElementById('touchControls');
   if(window.matchMedia && window.matchMedia('(pointer: coarse)').matches){
     touchControls.classList.add('show');
