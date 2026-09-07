@@ -740,7 +740,7 @@
   let lockTimer = null, lockResets = 0, lockDeadline = null, lockRemaining = null, pauseStartedAt = null;
   let lastAction = null; // 'rotate' | 'move' | null
   let lastKickIndex = null; // index of SRS kick used for the last successful rotation
-  let comboCount = -1; // -1 = no active combo, increments per consecutive line-clearing lock
+  let comboCount = 0; // consecutive line-clearing lock count; REN shown once this reaches 2
   let mode = 'marathon'; // 'marathon' | 'ta40'
   let rankingViewMode = 'marathon';
   let overlayContext = 'start'; // 'start' | 'pause' | 'gameover' | 'ranking' | 'settings'
@@ -887,7 +887,7 @@
     lastTime = performance.now();
     paused = false; gameOver = false; started = false;
     lockTimer = null; lockResets = 0; lockDeadline = null; lockRemaining = null; pauseStartedAt = null;
-    lastAction = null; lastKickIndex = null; comboCount = -1;
+    lastAction = null; lastKickIndex = null; comboCount = 0;
     effects = [];
     shakeUntil = 0;
     runStartTime = null;
@@ -1132,9 +1132,9 @@
     if(cleared > 0){
       comboCount++;
     } else {
-      comboCount = -1;
+      comboCount = 0;
     }
-    if(comboCount >= 1){
+    if(comboCount >= 2){
       score += comboCount * 50 * level;
       spawnCombo(comboCount);
     }
