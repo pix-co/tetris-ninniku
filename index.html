@@ -334,6 +334,8 @@
   .settings-panel{
     width:100%;
     text-align:left;
+    max-height: min(50vh, 460px);
+    overflow-y:auto;
   }
   .settings-panel.hidden{ display:none; }
   .settings-row{
@@ -358,6 +360,36 @@
     accent-color: var(--golden);
   }
   #settingsResetBtn{ width:100%; margin-top:4px; }
+  .keybind-section{
+    border-top: 2px solid rgba(140,124,110,0.25);
+    padding-top:12px;
+    margin-top:4px;
+  }
+  .keybind-list{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin:8px 0 10px;
+  }
+  .keybind-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    font-size:12px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .keybind-btn{
+    min-width:84px;
+    padding:6px 10px;
+    font-size:12px;
+  }
+  .keybind-btn.waiting{
+    background: var(--golden);
+    color:#fff;
+  }
+  #keysResetBtn{ width:100%; }
   .score-submit{
     display:flex;
     flex-direction:column;
@@ -489,6 +521,20 @@
             <input type="range" id="arrRange" min="0" max="100" step="5">
           </div>
           <button class="btn secondary" id="settingsResetBtn" type="button">初期値に戻す</button>
+          <div class="keybind-section">
+            <label>キーコンフィグ</label>
+            <div class="keybind-list" id="keybindList">
+              <div class="keybind-row"><span>左移動</span><button class="btn secondary keybind-btn" data-action="moveLeft" id="keyBtn-moveLeft" type="button"></button></div>
+              <div class="keybind-row"><span>右移動</span><button class="btn secondary keybind-btn" data-action="moveRight" id="keyBtn-moveRight" type="button"></button></div>
+              <div class="keybind-row"><span>右回転</span><button class="btn secondary keybind-btn" data-action="rotateCW" id="keyBtn-rotateCW" type="button"></button></div>
+              <div class="keybind-row"><span>左回転</span><button class="btn secondary keybind-btn" data-action="rotateCCW" id="keyBtn-rotateCCW" type="button"></button></div>
+              <div class="keybind-row"><span>ソフトドロップ</span><button class="btn secondary keybind-btn" data-action="softDrop" id="keyBtn-softDrop" type="button"></button></div>
+              <div class="keybind-row"><span>ハードドロップ</span><button class="btn secondary keybind-btn" data-action="hardDrop" id="keyBtn-hardDrop" type="button"></button></div>
+              <div class="keybind-row"><span>ホールド</span><button class="btn secondary keybind-btn" data-action="hold" id="keyBtn-hold" type="button"></button></div>
+              <div class="keybind-row"><span>一時停止</span><button class="btn secondary keybind-btn" data-action="pause" id="keyBtn-pause" type="button"></button></div>
+            </div>
+            <button class="btn secondary" id="keysResetBtn" type="button">キー割り当てを初期値に戻す</button>
+          </div>
         </div>
         <button class="btn" id="overlayBtn" type="button">はじめる</button>
         <button class="btn secondary hidden" id="overlayBackBtn" type="button">スタートに戻る</button>
@@ -510,7 +556,7 @@
       </div>
 
       <div class="panel">
-        <h2>ホールド (C)</h2>
+        <h2 id="holdPanelTitle">ホールド (C)</h2>
         <div class="mini-canvas-wrap"><canvas id="holdCanvas" width="80" height="60"></canvas></div>
       </div>
 
@@ -641,6 +687,12 @@
   const arrRangeEl = document.getElementById('arrRange');
   const arrValEl = document.getElementById('arrVal');
   const settingsResetBtnEl = document.getElementById('settingsResetBtn');
+  const keysResetBtnEl = document.getElementById('keysResetBtn');
+  const holdPanelTitleEl = document.getElementById('holdPanelTitle');
+  const keysHelpEl = document.getElementById('keysHelp');
+  const KEY_ACTIONS = ['moveLeft','moveRight','rotateCW','rotateCCW','softDrop','hardDrop','hold','pause'];
+  const keyBtnEls = {};
+  KEY_ACTIONS.forEach(a => { keyBtnEls[a] = document.getElementById('keyBtn-' + a); });
 
   // ---------- Face image (garlic face tile) ----------
   const faceImg = new Image();
@@ -704,6 +756,69 @@
     try{ localStorage.setItem('ninniku-tetris-controls', JSON.stringify(controls)); }catch(e){ /* ignore */ }
   }
   loadControls();
+
+  // ---------- Tunable controls (key bindings) ----------
+  const DEFAULT_KEYS = {
+    moveLeft: 'ArrowLeft', moveRight: 'ArrowRight',
+    rotateCW: 'ArrowUp', rotateCCW: 'KeyZ',
+    softDrop: 'ArrowDown', hardDrop: 'Space',
+    hold: 'KeyC', pause: 'KeyP',
+  };
+  let keyBindings = { ...DEFAULT_KEYS };
+  let keyCaptureAction = null;
+  function loadKeyBindings(){
+    try{
+      const saved = JSON.parse(localStorage.getItem('ninniku-tetris-keys') || '{}');
+      keyBindings = { ...DEFAULT_KEYS };
+      KEY_ACTIONS.forEach(a => {
+        if(typeof saved[a] === 'string' || saved[a] === null) keyBindings[a] = saved[a];
+      });
+    }catch(e){ keyBindings = { ...DEFAULT_KEYS }; }
+  }
+  function saveKeyBindings(){
+    try{ localStorage.setItem('ninniku-tetris-keys', JSON.stringify(keyBindings)); }catch(e){ /* ignore */ }
+  }
+  function actionForCode(code){
+    for(const a of KEY_ACTIONS){ if(keyBindings[a] === code) return a; }
+    return null;
+  }
+  function codeToLabel(code){
+    if(!code) return '未設定';
+    const map = { ArrowLeft:'←', ArrowRight:'→', ArrowUp:'↑', ArrowDown:'↓', Space:'Space', ControlLeft:'Ctrl', ControlRight:'Ctrl', ShiftLeft:'Shift', ShiftRight:'Shift' };
+    if(map[code]) return map[code];
+    if(code.indexOf('Key') === 0) return code.slice(3);
+    if(code.indexOf('Digit') === 0) return code.slice(5);
+    return code;
+  }
+  function refreshKeyBindButtons(){
+    KEY_ACTIONS.forEach(a => {
+      const btn = keyBtnEls[a];
+      btn.textContent = (keyCaptureAction === a) ? 'キー入力待ち…' : codeToLabel(keyBindings[a]);
+      btn.classList.toggle('waiting', keyCaptureAction === a);
+    });
+    updateKeysHelp();
+  }
+  function updateKeysHelp(){
+    holdPanelTitleEl.textContent = 'ホールド (' + codeToLabel(keyBindings.hold) + ')';
+    keysHelpEl.textContent =
+      codeToLabel(keyBindings.moveLeft) + ' ' + codeToLabel(keyBindings.moveRight) + ' : いどう　　' +
+      codeToLabel(keyBindings.rotateCW) + ' : 右回転　　' +
+      codeToLabel(keyBindings.rotateCCW) + ' : 左回転　　' +
+      codeToLabel(keyBindings.softDrop) + ' : ソフトドロップ　　' +
+      codeToLabel(keyBindings.hardDrop) + ' : ハードドロップ　　' +
+      codeToLabel(keyBindings.hold) + ' : ホールド　　' +
+      codeToLabel(keyBindings.pause) + ' : 一時停止　　Esc : スタートに戻る';
+  }
+  function assignKeyBinding(action, code){
+    KEY_ACTIONS.forEach(a => {
+      if(a !== action && keyBindings[a] === code) keyBindings[a] = null;
+    });
+    keyBindings[action] = code;
+    saveKeyBindings();
+    refreshKeyBindButtons();
+  }
+  loadKeyBindings();
+  refreshKeyBindButtons();
 
   // effects
   let effects = [];
@@ -1601,11 +1716,14 @@
     rankingListEl.classList.add('hidden');
     scoreSubmitEl.classList.add('hidden');
     refreshSettingsInputs();
+    keyCaptureAction = null;
+    refreshKeyBindButtons();
     settingsPanelEl.classList.remove('hidden');
     overlayEl.classList.remove('hidden');
   }
 
   function closeSettings(){
+    keyCaptureAction = null;
     if(gameOver){
       overlayContext = 'gameover';
     } else if(started && paused){
@@ -1739,9 +1857,28 @@
     arrValEl.textContent = controls.arrMs + 'ms';
     saveControls();
   });
+  KEY_ACTIONS.forEach(a => {
+    keyBtnEls[a].addEventListener('click', () => {
+      keyCaptureAction = a;
+      refreshKeyBindButtons();
+    });
+  });
+  keysResetBtnEl.addEventListener('click', () => {
+    keyBindings = { ...DEFAULT_KEYS };
+    saveKeyBindings();
+    refreshKeyBindButtons();
+  });
 
   window.addEventListener('keydown', (e) => {
     if(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if(keyCaptureAction){
+      e.preventDefault();
+      const capturedAction = keyCaptureAction;
+      keyCaptureAction = null;
+      if(e.code !== 'Escape'){ assignKeyBinding(capturedAction, e.code); }
+      else { refreshKeyBindButtons(); }
+      return;
+    }
     if(e.code === 'Escape' && started && !gameOver){
       initGame();
       updateModeButtons();
@@ -1777,16 +1914,17 @@
       if(e.code === 'Enter' || e.code === 'Space'){ startOrRestart(); }
       return;
     }
-    if(e.code === 'KeyP'){ togglePause(); return; }
+    const action = actionForCode(e.code);
+    if(action === 'pause'){ togglePause(); return; }
     if(paused) return;
-    switch(e.code){
-      case 'ArrowLeft': if(!e.repeat){ move(-1); startMoveRepeat(-1); } break;
-      case 'ArrowRight': if(!e.repeat){ move(1); startMoveRepeat(1); } break;
-      case 'ArrowUp': case 'KeyX': tryRotate(1); break;
-      case 'KeyZ': case 'ControlLeft': case 'ControlRight': tryRotate(-1); break;
-      case 'ArrowDown': if(!e.repeat){ softDrop(); startSoftDropRepeat(); } break;
-      case 'Space': if(!e.repeat) hardDrop(); break;
-      case 'KeyC': case 'ShiftLeft': case 'ShiftRight': holdSwap(); break;
+    switch(action){
+      case 'moveLeft': if(!e.repeat){ move(-1); startMoveRepeat(-1); } break;
+      case 'moveRight': if(!e.repeat){ move(1); startMoveRepeat(1); } break;
+      case 'rotateCW': tryRotate(1); break;
+      case 'rotateCCW': tryRotate(-1); break;
+      case 'softDrop': if(!e.repeat){ softDrop(); startSoftDropRepeat(); } break;
+      case 'hardDrop': if(!e.repeat) hardDrop(); break;
+      case 'hold': holdSwap(); break;
     }
   });
 
@@ -1825,9 +1963,9 @@
     horizDir = 0;
   }
   window.addEventListener('keyup', (e) => {
-    if(e.code === 'ArrowDown') stopSoftDropRepeat();
-    if(e.code === 'ArrowLeft') stopMoveRepeat(-1);
-    if(e.code === 'ArrowRight') stopMoveRepeat(1);
+    if(e.code === keyBindings.softDrop) stopSoftDropRepeat();
+    if(e.code === keyBindings.moveLeft) stopMoveRepeat(-1);
+    if(e.code === keyBindings.moveRight) stopMoveRepeat(1);
   });
   window.addEventListener('blur', stopSoftDropRepeat);
   window.addEventListener('blur', () => stopMoveRepeat());
