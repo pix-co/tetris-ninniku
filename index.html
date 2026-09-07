@@ -1107,6 +1107,12 @@
   function holdSwap(){
     if(holdUsed || gameOver || paused) return;
     holdUsed = true;
+    if(lockTimer !== null){
+      clearTimeout(lockTimer);
+      lockTimer = null;
+      lockDeadline = null;
+      lockResets = 0;
+    }
     if(holdType === null){
       holdType = current.type;
       current = spawnPiece();
