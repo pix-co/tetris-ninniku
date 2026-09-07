@@ -749,9 +749,13 @@
 
   function resizeCanvas(){
     const isMobile = !popupMode && window.innerWidth <= 700;
-    const maxW = isMobile
-      ? Math.min(window.innerWidth - 16, 560)
-      : Math.min(window.innerWidth - 40, 420);
+    let maxW;
+    if(isMobile){
+      maxW = Math.min(window.innerWidth - 16, 560);
+    } else {
+      const sideOverhead = 460; // side-left(130) + side(220) + stage gaps(40) + board-shell padding/border(28) + wrap padding(28) + buffer
+      maxW = Math.min(window.innerWidth - sideOverhead, 420);
+    }
     CELL = Math.max(18, Math.floor(maxW / COLS));
     boardCanvas.width = CELL * COLS;
     boardCanvas.height = CELL * ROWS;
