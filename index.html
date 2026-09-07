@@ -410,6 +410,14 @@
     width:100%;
   }
   .score-submit.hidden{ display:none; }
+  .rank-result{
+    margin:0;
+    font-size:15px;
+    font-weight:900;
+    color: var(--terracotta);
+    text-align:center;
+  }
+  .rank-result.hidden{ display:none; }
   #timeRow.hidden{ display:none; }
   #scoreRow.hidden, #levelRow.hidden{ display:none; }
   #overlayBackBtn.hidden{ display:none; }
@@ -517,6 +525,7 @@
           <ol id="rankingEntries"></ol>
         </div>
         <div class="score-submit hidden" id="scoreSubmit">
+          <p class="rank-result hidden" id="rankResultText"></p>
           <input type="text" id="nameInput" maxlength="12" placeholder="なまえ（12文字まで）">
           <button class="btn secondary" id="submitScoreBtn" type="button">ランキングに登録</button>
           <button class="btn secondary" id="shareScoreBtn" type="button">Xでシェア</button>
@@ -699,6 +708,7 @@
   const rankTabTaEl = document.getElementById('rankTabTa');
   const rankingEntriesEl = document.getElementById('rankingEntries');
   const scoreSubmitEl = document.getElementById('scoreSubmit');
+  const rankResultTextEl = document.getElementById('rankResultText');
   const nameInputEl = document.getElementById('nameInput');
   const submitScoreBtnEl = document.getElementById('submitScoreBtn');
   const shareScoreBtnEl = document.getElementById('shareScoreBtn');
@@ -1208,6 +1218,7 @@
     const text = mode === 'ta40' ? ('ライン: ' + lines + ' / 40') : ('スコア: ' + score + '　ライン: ' + lines);
     showOverlay('ゲームオーバー', text, 'もう一度');
     if(mode === 'marathon'){ showScoreSubmit('marathon', score); }
+    if(mode === 'marathon'){ checkAndShowRank('marathon', score); }
   }
 
   function triggerTAClear(){
@@ -1221,6 +1232,7 @@
     const text = 'タイム: ' + formatTime(finalMs);
     showOverlay('40ライン クリア！', text, 'もう一度');
     showScoreSubmit('ta40', finalMs);
+    checkAndShowRank('ta40', finalMs);
     spawnBigText('クリア!!', '#F3980D');
     spawnBurst(60);
     spawnCharacterRain(20);
@@ -1674,6 +1686,42 @@
       const list = await res.json();
       return Array.isArray(list) ? list : [];
     }catch(e){ return null; }
+  }
+
+  function triggerRankCelebration(rank){
+    if(rank === 1){
+      spawnCharacterSpin();
+      spawnBigText('1位！！', '#F3980D');
+      spawnBurst(90);
+      triggerShake();
+    } else if(rank <= 3){
+      spawnBigText(rank + '位！', '#C8481A');
+      spawnBurst(60);
+      triggerShake();
+    } else if(rank <= 6){
+      spawnBigText(rank + '位！', '#F3980D');
+      spawnBurst(35);
+    } else if(rank <= 10){
+      spawnBigText(rank + '位', '#3E7CB1');
+      spawnBurst(18);
+    }
+  }
+
+  async function checkAndShowRank(mode, value){
+    rankResultTextEl.textContent = '順位を確認中…';
+    rankResultTextEl.classList.remove('hidden');
+    const list = await fetchRanking(mode);
+    if(!pendingSubmit || pendingSubmit.mode !== mode || pendingSubmit.value !== value) return;
+    if(list === null){
+      rankResultTextEl.classList.add('hidden');
+      return;
+    }
+    const better = mode === 'ta40' ? (a,b) => a < b : (a,b) => a > b;
+    let rank = list.findIndex(e => better(value, e.value));
+    if(rank === -1) rank = list.length;
+    rank += 1;
+    rankResultTextEl.textContent = '現在の順位: ' + rank + '位';
+    triggerRankCelebration(rank);
   }
 
   async function renderRankingList(){
