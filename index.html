@@ -109,11 +109,11 @@
     width: 130px;
   }
   @media (max-width: 700px){
-    .board-shell{ order: 1; }
-    .side-left{ order: 2; width: 100%; max-width: 560px; }
-    .side{ order: 3; width: 100%; max-width: 560px; }
-    .side-left .next-list{ flex-direction: row; flex-wrap: wrap; justify-content: center; }
-    .mascot-panel, #scorePanel{ display: none; }
+    html:not(.popup-mode) .board-shell{ order: 1; }
+    html:not(.popup-mode) .side-left{ order: 2; width: 100%; max-width: 560px; }
+    html:not(.popup-mode) .side{ order: 3; width: 100%; max-width: 560px; }
+    html:not(.popup-mode) .side-left .next-list{ flex-direction: row; flex-wrap: wrap; justify-content: center; }
+    html:not(.popup-mode) .mascot-panel, html:not(.popup-mode) #scorePanel{ display: none; }
   }
   .panel{
     background: var(--panel);
@@ -613,6 +613,9 @@
 (function(){
   "use strict";
 
+  const popupMode = new URLSearchParams(location.search).get('popup') === '1';
+  if(popupMode) document.documentElement.classList.add('popup-mode');
+
   // ---------- Palette ----------
   const PALETTE = {
     I: "#F3980D", // golden
@@ -735,7 +738,7 @@
   }
 
   function resizeCanvas(){
-    const isMobile = window.innerWidth <= 700;
+    const isMobile = !popupMode && window.innerWidth <= 700;
     const maxW = isMobile
       ? Math.min(window.innerWidth - 16, 560)
       : Math.min(window.innerWidth - 40, 420);
@@ -1978,8 +1981,9 @@
     const w = 900, h = 980;
     const left = Math.round((window.screen.width - w) / 2);
     const top = Math.round((window.screen.height - h) / 2);
+    const popupUrl = location.origin + location.pathname + '?popup=1';
     window.open(
-      location.href,
+      popupUrl,
       'ninniku-tetris-popup',
       'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top +
         ',menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no'
