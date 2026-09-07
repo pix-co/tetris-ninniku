@@ -806,7 +806,7 @@
     return null;
   }
   function codeToLabel(code){
-    if(!code) return '未設定';
+    if(!code) return '';
     const map = { ArrowLeft:'←', ArrowRight:'→', ArrowUp:'↑', ArrowDown:'↓', Space:'Space', ControlLeft:'Ctrl', ControlRight:'Ctrl', ShiftLeft:'Shift', ShiftRight:'Shift' };
     if(map[code]) return map[code];
     if(code.indexOf('Key') === 0) return code.slice(3);
