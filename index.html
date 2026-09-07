@@ -1283,9 +1283,24 @@
   }
 
   function spawnCombo(count){
+    let color = '#3E7CB1', fontScale = 0.55, rainbow = false;
+    if(count >= 10){
+      rainbow = true; fontScale = 1.05;
+      spawnBurst(40); triggerShake();
+    } else if(count >= 8){
+      color = '#C8481A'; fontScale = 0.9;
+      spawnBurst(25); triggerShake();
+    } else if(count >= 6){
+      color = '#F3980D'; fontScale = 0.78;
+      spawnBurst(15);
+    } else if(count >= 4){
+      color = '#3FA34D'; fontScale = 0.66;
+    }
+    const excl = count >= 8 ? '!!!' : count >= 6 ? '!!' : count >= 4 ? '!' : '';
     effects.push({
       kind:'combo',
-      text: count + ' REN',
+      text: count + ' REN' + excl,
+      color, rainbow, fontScale,
       life: 700, maxLife: 700,
       y0: (ROWS*CELL)*0.26,
     });
@@ -1376,16 +1391,17 @@
       } else if(e.kind === 'combo'){
         ctx.save();
         ctx.globalAlpha = Math.min(1, t*1.4);
-        const scale = 1 + (1-t)*0.15;
+        const pop = 0.15 + (e.fontScale-0.55)*0.7;
+        const scale = 1 + (1-t)*pop;
         ctx.translate(boardCanvas.width/2, e.y0 - (1-t)*14);
         ctx.scale(scale, scale);
-        ctx.font = '900 ' + Math.round(CELL*0.55) + 'px "Zen Maru Gothic", sans-serif';
+        ctx.font = '900 ' + Math.round(CELL*e.fontScale) + 'px "Zen Maru Gothic", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.lineWidth = Math.max(2, CELL*0.12);
         ctx.strokeStyle = '#FBEFD9';
         ctx.strokeText(e.text, 0, 0);
-        ctx.fillStyle = '#3E7CB1';
+        ctx.fillStyle = e.rainbow ? ('hsl(' + Math.round((performance.now()/4) % 360) + ',85%,50%)') : e.color;
         ctx.fillText(e.text, 0, 0);
         ctx.restore();
       } else if(e.kind === 'particle'){
