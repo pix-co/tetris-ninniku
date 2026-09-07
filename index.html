@@ -506,7 +506,7 @@
         <div class="stat-row" id="scoreRow"><span>スコア</span><b id="score">0</b></div>
         <div class="stat-row"><span>ライン</span><b id="lines">0</b></div>
         <div class="stat-row" id="levelRow"><span>レベル</span><b id="level">1</b></div>
-        <div class="stat-row hidden" id="timeRow"><span>タイム</span><b id="timeStat">0:00.0</b></div>
+        <div class="stat-row" id="timeRow"><span>タイム</span><b id="timeStat">0:00.0</b></div>
       </div>
 
       <div class="panel">
@@ -1054,7 +1054,7 @@
 
   function updateStats(){
     scoreEl.textContent = score;
-    linesEl.textContent = mode === 'ta40' ? Math.max(0, 40 - lines) : lines;
+    linesEl.textContent = lines;
     levelEl.textContent = level;
   }
 
@@ -1706,7 +1706,6 @@
     modeMarathonBtnEl.classList.toggle('active', mode === 'marathon');
     modeTaBtnEl.classList.toggle('active', mode === 'ta40');
     const isTa = mode === 'ta40';
-    timeRowEl.classList.toggle('hidden', !isTa);
     scoreRowEl.classList.toggle('hidden', isTa);
     levelRowEl.classList.toggle('hidden', isTa);
     updateStats();
