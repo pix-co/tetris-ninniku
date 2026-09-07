@@ -515,7 +515,7 @@
         <div class="score-submit hidden" id="scoreSubmit">
           <input type="text" id="nameInput" maxlength="12" placeholder="なまえ（12文字まで）">
           <button class="btn secondary" id="submitScoreBtn" type="button">ランキングに登録</button>
-          <button class="btn secondary" id="shareScoreBtn" type="button">結果をシェア</button>
+          <button class="btn secondary" id="shareScoreBtn" type="button">Xでシェア</button>
         </div>
         <div class="settings-panel hidden" id="settingsPanel">
           <div class="settings-row">
@@ -1720,7 +1720,7 @@
     nameInputEl.value = savedName;
     submitScoreBtnEl.textContent = 'ランキングに登録';
     submitScoreBtnEl.disabled = false;
-    shareScoreBtnEl.textContent = '結果をシェア';
+    shareScoreBtnEl.textContent = 'Xでシェア';
     scoreSubmitEl.classList.remove('hidden');
     if(overlayContext === 'gameover'){
       gameoverFocusIndex = 0;
@@ -1760,23 +1760,16 @@
     }
   });
 
-  shareScoreBtnEl.addEventListener('click', async () => {
+  shareScoreBtnEl.addEventListener('click', () => {
     if(!pendingSubmit) return;
     const { mode: subMode, value: subValue } = pendingSubmit;
-    const text = subMode === 'ta40'
+    const text = (subMode === 'ta40'
       ? 'ニンニクマンテトリスで40ラインTAを ' + formatTime(subValue) + ' でクリアしました！'
-      : 'ニンニクマンテトリスでマラソン ' + subValue + ' 点を記録しました！';
+      : 'ニンニクマンテトリスでマラソン ' + subValue + '点(Lv.' + level + '／' + lines + 'ライン)を記録しました！'
+    ) + ' #ニンニクマンテトリス';
     const url = location.href;
-    if(navigator.share){
-      try{ await navigator.share({ text, url }); }catch(e){ /* user cancelled or unsupported, ignore */ }
-      return;
-    }
-    try{
-      await navigator.clipboard.writeText(text + ' ' + url);
-      shareScoreBtnEl.textContent = 'コピーしました！';
-    }catch(e){
-      shareScoreBtnEl.textContent = 'コピーに失敗しました';
-    }
+    const intentUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(url);
+    window.open(intentUrl, '_blank', 'noopener,noreferrer');
   });
 
   function openRanking(){
