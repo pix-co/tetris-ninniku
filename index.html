@@ -776,6 +776,7 @@
   let overlayContext = 'start'; // 'start' | 'pause' | 'gameover' | 'ranking' | 'settings'
   let gameoverFocusIndex = 0; // 0 = もう一度, 1 = スタートに戻る
   let runStartTime = null, pausedAccum = 0;
+  let rankingStartToken = null;
 
   // ---------- Tunable controls (soft drop speed, horizontal DAS/ARR) ----------
   const DEFAULT_CONTROLS = { softDropMs: 50, dasMs: 170, arrMs: 40 };
@@ -1776,6 +1777,16 @@
   // issue via the GitHub API, so submitting doesn't need to leave the page.
   const RANKING_SUBMIT_URL = 'https://tetris-ninniku.rapidpredict.workers.dev/';
 
+  // スタート直後にWorkerから署名付きトークンを取得しておき、登録時に
+  // 一緒に送ることで「プレイせずに直接POSTする」不正を防ぐ。
+  async function fetchRankingStartToken(){
+    try{
+      const res = await fetch(RANKING_SUBMIT_URL + 'start', { method: 'POST' });
+      const data = await res.json().catch(() => null);
+      if(data && data.ok && data.token) rankingStartToken = data.token;
+    }catch(e){ /* 取得できなくても登録時にWorker側で弾かれるだけなので握りつぶす */ }
+  }
+
   function showScoreSubmit(mode, value){
     pendingSubmit = { mode, value };
     let savedName = '';
@@ -1808,7 +1819,7 @@
       const res = await fetch(RANKING_SUBMIT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: subMode, value: subValue, name }),
+        body: JSON.stringify({ mode: subMode, value: subValue, name, token: rankingStartToken }),
       });
       const data = await res.json().catch(() => null);
       if(res.ok && data && data.ok){
@@ -1965,6 +1976,8 @@
       lastTime = performance.now();
       runStartTime = performance.now();
       pausedAccum = 0;
+      rankingStartToken = null;
+      fetchRankingStartToken();
       draw();
     }
   }
